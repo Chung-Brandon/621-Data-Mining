@@ -1,0 +1,57 @@
+---
+title: "621 MoneyBall"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load Required Libraries
+
+library(tidyverse)
+```
+
+
+# Introduction
+
+## In this homework assignment we will explore, analyze and model a data set containing 2200 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
+
+
+# Data Exploration
+
+
+```{r include=FALSE}
+# Loading the data
+
+training <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-training-data.csv")
+
+training <- training[,-1] # Removing Index
+
+Y <- training[,1] # Target variable
+X <- training[,2:16] # Predictor variables
+```
+
+```{r echo=FALSE}
+summary(training)
+```
+
+```{r echo=FALSE, warning=FALSE}
+# Reshape to long format
+X_long <- pivot_longer(X, everything(), names_to = "Variable", values_to = "Value")
+
+
+# Plot distributions
+ggplot(X_long, aes(x = Value)) +
+  geom_histogram(bins = 25, fill = "steelblue", color = "white") +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Distribution of Predictor Variables")
+
+```
+
+
+
+
+
+
+
+
