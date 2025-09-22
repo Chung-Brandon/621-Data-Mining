@@ -9,16 +9,17 @@ output: pdf_document
 # Load Required Libraries
 
 library(tidyverse)
+library(corrplot)
+
 ```
 
 
 # Introduction
 
-## In this homework assignment we will explore, analyze and model a data set containing 2200 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
+In this homework assignment we will explore, analyze and model a data set containing 2276 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
 
 
 # Data Exploration
-
 
 ```{r include=FALSE}
 # Loading the data
@@ -31,9 +32,18 @@ Y <- training[,1] # Target variable
 X <- training[,2:16] # Predictor variables
 ```
 
+## Data Summary
+
+The moneyball training data set contains 16 variables, excluding the index, and 2,276 observations. Each observational unit represents a single team's statistics for that year's performance. There are 15 predictor variables which are counts of various actions in baseball such as base hits, home runs, strikeouts, stolen bases, caught stealing, hits allows and more. The table in the introduction above provides a list of all variable definitions.   
+
+
+As seen below in our numerical summary the data contains NA values in certain variables (TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP). These NA values will be addressed in the data preparation. Notably TEAM_BATTING_HBP contains a large amount of NAs at a count of 2085. There is also certain variables with max and min values that deviate significantly from the interquartile ranges such as TEAM_PITCHING_H and TEAM_PITCHING_SO.        
+
+
 ```{r echo=FALSE}
 summary(training)
 ```
+## Data Visualizations 
 
 ```{r echo=FALSE, warning=FALSE}
 # Reshape to long format
@@ -44,9 +54,30 @@ X_long <- pivot_longer(X, everything(), names_to = "Variable", values_to = "Valu
 ggplot(X_long, aes(x = Value)) +
   geom_histogram(bins = 25, fill = "steelblue", color = "white") +
   facet_wrap(~Variable, scales = "free") +
-  labs(title = "Distribution of Predictor Variables")
+  labs(title = "Distributions of Predictor Variables")
 
 ```
+
+```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
+ggplot(X_long, aes(x = Variable, y = Value)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "red") +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Boxplots of Predictor Variables",
+       x = NULL, y = "Value") +
+  theme_minimal()
+```
+
+The histogram and box plots above provide a better understanding of the distribution of our predictor variables. Most variables have a relatively normal distribution where others show strong left and right side skewing. The box plots also clue us into possible data entry errors as may be the case for TEAM_PITCHING_SO.  
+
+```{r echo=FALSE}
+cor_matrix <- cor(training, use = "pairwise.complete.obs")
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
+
+```
+
+The correlation heatmap helps us to see the relationship of variables against the target variable and other predictors. Correlations are mostly what was expected based on the theoretical effect given in the introduction. An example of this can be seen with TEAM_BASERUN_CS where the correlation is slightly positive (0.02240407) when the theoretical effect is to have a negative impact on wins.
+
+
 
 
 
