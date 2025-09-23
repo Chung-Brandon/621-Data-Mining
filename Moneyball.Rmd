@@ -10,7 +10,7 @@ output: pdf_document
 
 library(tidyverse)
 library(corrplot)
-
+library(dplyr)
 ```
 
 
@@ -77,6 +77,23 @@ corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
 
 The correlation heatmap helps us to see the relationship of variables against the target variable and other predictors. Correlations are mostly what was expected based on the theoretical effect given in the introduction. An example of this can be seen with TEAM_BASERUN_CS where the correlation is slightly positive (0.02240407) when the theoretical effect is to have a negative impact on wins.
 
+
+#Data Preparation
+The batter being hit by a pitch was removal as the influence is a factor outsideof the batter's controls and it's not a repeatable skill.
+
+```{r}
+Training_prep<-training|>
+  select(-TEAM_BATTING_HBP)
+
+str(Training_prep)
+```
+
+For data imputation we looked at the columns with missing and use imputation on on those columns that have a rate 5% missing data.
+
+```{r}
+Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
+print(Missing)
+```
 
 
 
