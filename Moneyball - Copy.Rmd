@@ -1,0 +1,119 @@
+---
+title: "621 MoneyBall"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load Required Libraries
+
+library(tidyverse)
+library(corrplot)
+library(ggplot2)
+```
+
+
+# Introduction
+
+In this homework assignment we will explore, analyze and model a data set containing 2276 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
+
+
+# Data Exploration
+
+```{r include=FALSE}
+# Loading the data
+# Read in the training data
+training <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-training-data.csv") %>%
+  select(-INDEX)
+
+# Read in the evaluation data
+evaluation <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-evaluation-data.csv")
+```
+
+
+```{r}
+glimpse(training)
+```
+The Moneyball training dataset contains 16 variables. Among them, TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP have missing (NA) values, with TEAM_BATTING_HBP having the highest number of missing entries.
+
+```{r}
+colSums(is.na(training))
+```
+
+```{r}
+summary(training)
+```
+```{r}
+head(training)
+```
+
+
+## Data Visualizations 
+In the histogram plot below, we see the team TARGET_WINS, TEAM_BATTING_2B, and TEAM_BATTING_BB has most the normal distribution. 
+
+```{r echo=FALSE, warning=FALSE}
+# Reshape to long format
+X_long <- training %>% 
+  select(TARGET_WINS, everything()) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Value")
+
+# Plot distributions
+ggplot(X_long, aes(x = Value)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "steelblue", color = "white") +
+  geom_density(color = "red", size = 1) +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Distributions of Predictor Variables")
+
+```
+
+```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
+ggplot(X_long, aes(x = Variable, y = Value)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "red") +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Boxplots of Predictor Variables",
+       x = NULL, y = "Value") +
+  theme_minimal()
+```
+
+
+
+```{r echo=FALSE}
+cor_matrix <- cor(training, use = "pairwise.complete.obs")
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
+
+```
+
+       
+#Feature Engineering
+
+```{r}
+#Replace NA with median of Column
+
+training <- training %>% mutate_all(~ifelse(is.na(.x), median(.x, na.rm = TRUE), .x))
+
+evaluation <- evaluation %>% mutate_all(~ifelse(is.na(.x), median(.x, na.rm = TRUE), .x))
+```
+
+```{r}
+colSums(is.na(training))
+```
+
+```{r}
+colSums(is.na(evaluation))
+```
+##Model 1
+All variables response in TARGET_WINS???
+
+##Model 2
+Pick the high correlations ???
+
+##Model 3
+
+
+
+
+
+
+
+
