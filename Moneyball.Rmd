@@ -11,6 +11,7 @@ output: pdf_document
 library(tidyverse)
 library(corrplot)
 library(dplyr)
+library(mice)
 ```
 
 
@@ -93,6 +94,16 @@ For data imputation we looked at the columns with missing and use imputation on 
 ```{r}
 Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
 print(Missing)
+```
+
+Used multiple imputation to impute the missing data using MICE predictive mean matching method.
+```{r}
+Training_imp<-mice(Training_prep,
+                   method = "pmm", #pmm=predictive mean matching
+                   m=5,
+                   maxit=5,
+                   seed=10)|>
+  complete()
 ```
 
 
