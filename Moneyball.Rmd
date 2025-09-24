@@ -107,6 +107,55 @@ Training_imp<-mice(Training_prep,
 ```
 
 
+# Multiple Linear Regression Models
+
+### Model 1: All Features
+
+```{r m1}
+model1 = lm(formula = TARGET_WINS ~
+              TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B +
+              TEAM_BATTING_HR + TEAM_BATTING_BB + TEAM_BATTING_SO +
+              TEAM_BASERUN_SB + TEAM_BASERUN_CS +
+              TEAM_PITCHING_H + TEAM_PITCHING_HR + TEAM_PITCHING_BB + TEAM_PITCHING_SO +
+              TEAM_FIELDING_E + TEAM_FIELDING_DP,
+            data = Training_imp)
+
+summary(model1)
+
+# Residuals
+m1_resid = model1$residuals
+hist(m1_resid)
+qqnorm(m1_resid)
+qqline(m1_resid)
+```
+
+### Model 2:
+
+Drop:
+TEAM_PITCHING_HR for correlation with TEAM_BATTING_HR
+TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_PITCHING_SO, TEAM_FIELDING_DP for missing values
+
+```{r m2}
+model2 = lm(formula = TARGET_WINS ~
+              TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B + TEAM_BATTING_HR + TEAM_BATTING_BB +
+              TEAM_PITCHING_H + TEAM_PITCHING_BB + TEAM_FIELDING_E,
+            data = Training_imp)
+
+summary(model2)
+
+# Residuals
+m2_resid = model2$residuals
+hist(m2_resid)
+qqnorm(m2_resid)
+qqline(m2_resid)
+```
+
+```{r variance}
+library(caret)
+
+nzv_cols <- nearZeroVar(Training_imp, saveMetrics = TRUE)
+```
+
 
 
 
