@@ -1,0 +1,222 @@
+---
+title: "621 MoneyBall"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Load Required Libraries
+
+library(tidyverse)
+library(corrplot)
+library(ggplot2)
+library(mice)
+library(broom)
+library(dplyr)
+library(car)
+```
+
+
+# Introduction
+
+In this homework assignment we will explore, analyze and model a data set containing 2276 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
+
+
+# Data Exploration
+
+```{r include=FALSE}
+# Loading the data
+# Read in the training data
+training <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-training-data.csv") %>%
+  select(-INDEX)
+
+# Read in the evaluation data
+evaluation <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-evaluation-data.csv")
+```
+
+## Data Summary
+
+The moneyball training data set contains 16 variables, excluding the index, and 2,276 observations. Each observational unit represents a single team's statistics for that year's performance. There are 15 predictor variables which are counts of various actions in baseball such as base hits, home runs, strikeouts, stolen bases, caught stealing, hits allows and more. The table in the introduction above provides a list of all variable definitions.   
+
+
+As seen below in our numerical summary the data contains NA values in certain variables (TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP). These NA values will be addressed in the data preparation. Notably TEAM_BATTING_HBP contains a large amount of NAs at a count of 2085. There is also certain variables with max and min values that deviate significantly from the interquartile ranges such as TEAM_PITCHING_H and TEAM_PITCHING_SO.  
+
+```{r}
+glimpse(training)
+```
+
+
+```{r}
+colSums(is.na(training))
+```
+
+```{r}
+summary(training)
+```
+```{r}
+head(training)
+```
+
+# Data Visualizations 
+
+```{r echo=FALSE, warning=FALSE}
+# Reshape to long format
+X_long <- training %>% 
+  select(TARGET_WINS, everything()) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Value")
+
+# Plot distributions
+ggplot(X_long, aes(x = Value)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "steelblue", color = "white") +
+  geom_density(color = "red", size = 1) +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Distributions of Predictor Variables")
+
+```
+
+```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
+ggplot(X_long, aes(x = Variable, y = Value)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "red") +
+  facet_wrap(~Variable, scales = "free") +
+  labs(title = "Boxplots of Predictor Variables",
+       x = NULL, y = "Value") +
+  theme_minimal()
+```
+
+The histogram and box plots above provide a better understanding of the distribution of our predictor variables. Most variables have a relatively normal distribution where others show strong left and right side skewing. The box plots also clue us into possible data entry errors as may be the case for TEAM_PITCHING_SO.  
+
+
+```{r echo=FALSE}
+cor_matrix <- cor(training, use = "pairwise.complete.obs")
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
+
+```
+The correlation heatmap helps us to see the relationship of variables against the target variable and other predictors. Correlations are mostly what was expected based on the theoretical effect given in the introduction. An example of this can be seen with TEAM_BASERUN_CS where the correlation is slightly positive (0.02240407) when the theoretical effect is to have a negative impact on wins.
+
+       
+# Data Preparation
+The batter being hit by a pitch was removal as the influence is a factor outside of the batter's controls and it's not a repeatable skill.
+
+```{r}
+Training_prep<-training|>
+  select(-TEAM_BATTING_HBP)
+
+str(Training_prep)
+```
+
+For data imputation we looked at the columns with missing and use imputation on on those columns that have a rate 5% missing data.
+
+```{r}
+Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
+print(Missing)
+```
+
+Used multiple imputation to impute the missing data using MICE predictive mean matching method.
+```{r}
+Training_imp<-mice(Training_prep,
+                   method = "pmm", #pmm=predictive mean matching
+                   m=5,
+                   maxit=5,
+                   seed=10)|>
+  complete()
+```
+# Multiple Linear Regression Models
+
+## Model 1: All Features
+
+```{r m1}
+model1 = lm(formula = TARGET_WINS ~
+              TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B +
+              TEAM_BATTING_HR + TEAM_BATTING_BB + TEAM_BATTING_SO +
+              TEAM_BASERUN_SB + TEAM_BASERUN_CS +
+              TEAM_PITCHING_H + TEAM_PITCHING_HR + TEAM_PITCHING_BB + TEAM_PITCHING_SO +
+              TEAM_FIELDING_E + TEAM_FIELDING_DP,
+            data = Training_imp)
+
+summary(model1)
+
+# Residuals
+m1_resid = model1$residuals
+hist(m1_resid)
+qqnorm(m1_resid)
+qqline(m1_resid)
+```
+
+
+## Model 2:
+
+Drop:
+TEAM_PITCHING_HR for correlation with TEAM_BATTING_HR
+TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_PITCHING_SO, TEAM_FIELDING_DP for missing values
+
+```{r m2}
+model2 = lm(formula = TARGET_WINS ~
+              TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B + TEAM_BATTING_HR + TEAM_BATTING_BB +
+              TEAM_PITCHING_H + TEAM_PITCHING_BB + TEAM_FIELDING_E,
+            data = Training_imp)
+
+summary(model2)
+
+# Residuals
+m2_resid = model2$residuals
+hist(m2_resid)
+qqnorm(m2_resid)
+qqline(m2_resid)
+```
+## Model 3:
+Only taking the high p-values in model 1 and model 2.
+
+```{r m3}
+model3 = lm(formula = TARGET_WINS ~ 
+              TEAM_BATTING_H + TEAM_BATTING_SO + 
+              TEAM_FIELDING_E + TEAM_FIELDING_DP + 
+              TEAM_BATTING_H + TEAM_BATTING_3B + 
+              TEAM_BATTING_HR + TEAM_FIELDING_E,
+            data = Training_imp)
+
+summary(model3)
+
+# Residuals
+m3_resid = model3$residuals
+hist(m3_resid)
+qqnorm(m3_resid)
+qqline(m3_resid)
+```
+
+# Select Models:
+
+While Model 1 has higher multidisciplinary in certain predictors. But our analysis identified Model 1 as the strongest regression model. It achieved the lowest residual error (12.66) and the highest adjusted R² (0.354), making it the most accurate and reliable predictor of team wins. 
+
+```{r}
+
+result_table <- bind_rows(
+  glance(model1) %>% mutate(Model = "Model 1"),
+  glance(model2) %>% mutate(Model = "Model 2"),
+  glance(model3) %>% mutate(Model = "Model 3")
+) %>%
+  transmute(
+    Model,
+    RSE        = sigma,
+    Adj.R2     = adj.r.squared,
+    F.Statistic = statistic
+  )
+
+result_table
+
+```
+
+
+```{r}
+vif(model1)
+```
+
+```{r}
+vif(model2)
+```
+
+
+```{r}
+vif(model3)
+```
+
