@@ -2,7 +2,9 @@
 title: "621 MoneyBall"
 author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ---
@@ -23,12 +25,33 @@ library(broom)
 library(dplyr)
 library(car)
 library(caret)
+library(knitr)
 ```
-
 
 # Introduction
 
 In this homework assignment we will explore, analyze and model a data set containing 2276 professional baseball team records from the years 1871 to 2006. Our objective is to build a multiple linear regression model on the given training data to predict the number of wins for each team in the test data.
+
+```{r echo=FALSE, warning=FALSE}
+variable_summary <- data.frame(
+  Variable_Name = c("INDEX", "TARGET_WINS", "TEAM_BATTING_H", "TEAM_BATTING_2B", "TEAM_BATTING_3B",
+                    "TEAM_BATTING_HR", "TEAM_BATTING_BB", "TEAM_BATTING_HBP", "TEAM_BATTING_SO",
+                    "TEAM_BASERUN_SB", "TEAM_BASERUN_CS", "TEAM_FIELDING_E", "TEAM_FIELDING_DP",
+                    "TEAM_PITCHING_BB", "TEAM_PITCHING_H", "TEAM_PITCHING_HR", "TEAM_PITCHING_SO"),
+  Definition = c("Identification variable (do not use)", "Number of wins",
+                 "Base hits (1B, 2B, 3B, HR)", "Doubles", "Triples",
+                 "Homeruns", "Walks", "Hit by pitch", "Strikeouts",
+                 "Stolen bases", "Caught stealing", "Errors", "Double plays",
+                 "Walks allowed", "Hits allowed", "Homeruns allowed", "Strikeouts by pitchers"),
+  Theoretical_Effect = c("None", "—", "Positive", "Positive", "Positive",
+                         "Positive", "Positive", "Positive", "Negative",
+                         "Positive", "Negative", "Negative", "Positive",
+                         "Negative", "Negative", "Negative", "Positive")
+)
+
+kable(variable_summary, caption = "Variable Definitions and Theoretical Effects on Wins")
+
+```
 
 
 # Data Exploration
@@ -50,25 +73,25 @@ The moneyball training data set contains 16 variables, excluding the index, and 
 
 As seen below in our numerical summary, the data contains NA values in certain variables (TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP). These NA values will be addressed in the data preparation. In addition, TEAM_BATTING_HBP contains a large amount of NAs at a count of 2085. There is also certain variables with max values that deviate significantly from the interquartile ranges such as TEAM_PITCHING_H and TEAM_PITCHING_SO.   
 
-```{r}
+```{r echo=FALSE}
 glimpse(training)
 ```
 
 
-```{r}
+```{r echo=FALSE}
 colSums(is.na(training))
 ```
 
-```{r}
+```{r echo=FALSE}
 summary(training)
 ```
-```{r}
+```{r include=FALSE}
 head(training)
 ```
 
 # Data Visualizations 
 
-```{r echo=TRUE, fig.height=6, fig.width=10, warning=FALSE}
+```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
 # Reshape to long format
 X_long <- training %>% 
   select(TARGET_WINS, everything()) %>%
@@ -83,7 +106,7 @@ ggplot(X_long, aes(x = Value)) +
 
 ```
 
-```{r echo=TRUE, fig.height=6, fig.width=10, warning=FALSE}
+```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
 ggplot(X_long, aes(x = Variable, y = Value)) +
   geom_boxplot(fill = "lightblue", outlier.color = "red") +
   facet_wrap(~Variable, scales = "free") +
@@ -95,7 +118,7 @@ ggplot(X_long, aes(x = Variable, y = Value)) +
 The histogram and box plots above provide a better understanding of the distribution of our predictor variables. Most variables have a relatively normal distribution where others show strong left and right side skewing. The box plots also clue us into possible data entry errors as may be the case for TEAM_PITCHING_SO.  
 
 
-```{r echo=TRUE}
+```{r echo=FALSE}
 cor_matrix <- cor(training, use = "pairwise.complete.obs")
 corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
 
@@ -104,7 +127,7 @@ The correlation heat map helps us to see the relationship of variables against t
 
 Diving deeper into the outliers for the TEAM_PITCHING_SO (pitchers striking out the opposing team's hitter) variable we can see that the record for these teams also are paired with a 0 TEAM_PITCHING_HR (home runs allowed by the pitchers), and so it stand to reason that these outliers are not data errors. 
 
-```{r}
+```{r echo=FALSE}
 top2_rows <- training %>%
   arrange(desc(TEAM_PITCHING_SO)) %>%
   slice(1:2)
@@ -114,7 +137,7 @@ top2_rows
 
 For the outliers in TEAM_PITCHING_H (hits allowed by pitchers) our distribution shows us that the outliers are likely not data errors either. There are infrequent but other recorded values between our outliers and the IQR of our variable. Our outliers in this variable are plausible real recorded values that happen to fall far on our distribution's right sided tail. 
 
-```{r}
+```{r echo=FALSE}
 ggplot(training, aes(x = TEAM_PITCHING_H)) +
   geom_histogram(binwidth = 700, fill = "steelblue", color = "white") +
   labs(title = "Distribution of Team Pitching Hits",
@@ -127,7 +150,7 @@ ggplot(training, aes(x = TEAM_PITCHING_H)) +
 # Data Preparation
 The variable TEAM_BATTING_HBP which represents a batter being hit by a pitch was removed as the influence is a factor outside of the batter's controls and it's not a repeatable skill. The variable also contained 2,085 NA values out of the total of 2,276 observations.
 
-```{r}
+```{r echo=FALSE}
 Training_prep<-training|>
   select(-TEAM_BATTING_HBP)
 
@@ -136,7 +159,7 @@ str(Training_prep)
 
 Near zero variance variables are variables with observed values that barely change across observations. Because of this they contribute little to analysis and introduce unnecessary complexity along with multicollinearity risk. No variables were found to be near zero variance as seen below.
 
-```{r}
+```{r echo=FALSE}
 nzv_cols <- nearZeroVar(training, saveMetrics = TRUE)
 nzv_cols
 ```
@@ -144,13 +167,13 @@ nzv_cols
 
 For data imputation we looked at the columns with missing values and used imputation on those columns that have a rate 5% missing data.
 
-```{r}
+```{r echo=FALSE}
 Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
 print(Missing)
 ```
 
 Used multiple imputation to impute the missing data using MICE predictive mean matching method.
-```{r}
+```{r include=FALSE}
 Training_imp<-mice(Training_prep,
                    method = "pmm", #pmm=predictive mean matching
                    m=5,
@@ -163,7 +186,9 @@ Training_imp<-mice(Training_prep,
 
 ## Model 1: All Features
 
-```{r m1}
+For the first model we choose to include all the predictive variables. This will allow us to see which features have significant influence on our TARGET_WINS dependent variable.
+
+```{r m1, echo=FALSE}
 model1 = lm(formula = TARGET_WINS ~
               TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B +
               TEAM_BATTING_HR + TEAM_BATTING_BB + TEAM_BATTING_SO +
@@ -184,11 +209,10 @@ qqline(m1_resid)
 
 ## Model 2:
 
-Drop:
-TEAM_PITCHING_HR for correlation with TEAM_BATTING_HR
-TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_PITCHING_SO, TEAM_FIELDING_DP for missing values
+For the second model we narrowed down the variable selection based on our findings that TEAM_PITCHING_HR has high multicollinearity with TEAM_BATTING_HR, therefore we removed TEAM_PITCHING_HR. In addition, we removed TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_PITCHING_SO, TEAM_FIELDING_DP for missing values. Our thoughts here is that by removing these variables our model is more reliable due to removal of imputed values and reduced model complexity. 
 
-```{r m2}
+```{r m2, echo=FALSE}
+
 model2 = lm(formula = TARGET_WINS ~
               TEAM_BATTING_H + TEAM_BATTING_2B + TEAM_BATTING_3B + TEAM_BATTING_HR + TEAM_BATTING_BB +
               TEAM_PITCHING_H + TEAM_PITCHING_BB + TEAM_FIELDING_E,
@@ -205,18 +229,15 @@ qqline(m2_resid)
 
 ## Model 3:
 
-Only taking the high p-values in model 1 and model 2.
+For our third model our group utilized the backward selection process where we removed the lowest p-value variables noted from model 1 and 2. Included in this model were only variables with p-values greater than 0.05.
 
-```{r m3}
-model3 = lm(formula = TARGET_WINS ~ 
-              TEAM_BATTING_H + TEAM_BATTING_SO + 
-              TEAM_FIELDING_E + TEAM_FIELDING_DP + 
-              TEAM_BATTING_H + TEAM_BATTING_3B + 
-              TEAM_BATTING_HR + TEAM_FIELDING_E,
+```{r m3, echo=FALSE}
+model3 = lm(formula = TARGET_WINS ~
+              TEAM_BATTING_SO + TEAM_BASERUN_CS +
+              TEAM_PITCHING_HR + TEAM_PITCHING_BB +
+              TEAM_BATTING_BB,
             data = Training_imp)
-
 summary(model3)
-
 # Residuals
 m3_resid = model3$residuals
 hist(m3_resid)
@@ -224,11 +245,16 @@ qqnorm(m3_resid)
 qqline(m3_resid)
 ```
 
+
 # Select Models:
 
-While Model 1 has higher multicollinearity in certain predictors, our analysis identified Model 1 as the strongest regression model. It achieved the lowest residual error (12.66) and the highest adjusted R² (0.354), making it the most accurate and reliable predictor of team wins. 
+While Model 1 has higher multicollinearity in certain predictors, our analysis identified Model 1 as the strongest regression model. It achieved the lowest residual error (12.66) and the highest adjusted R² (0.354), making it the most accurate and reliable predictor of team wins. Model 1's residuals show a normal distribution and a normal looking Q-Q plot.  
 
-```{r}
+Model 1 shows that for a baseball team to increase their amount of wins for the season they should focus on increasing their batting home runs and stolen bases. TEAM_BATTING_HR has the greatest positive impact at a coefficient of 0.05764 and TEAM_BASERUN_SB has the second greatest positive impact with a coefficient of 0.04945. Conversely, minimizing fielding errors (TEAM_FIELDING_E) as this variable has the largest negative impact on wins with a coefficient of -0.041504. 
+
+The variable TEAM_BATTING_HR is noted to be highly correlated with TEAM_PITCHING_HR, however both of these variables have large theoretical impact to the probability of winning. Hitting a home run or allowing a home run directly influences the game's score and therefore our group decided to keep these variables. 
+
+```{r echo=FALSE}
 
 result_table <- bind_rows(
   glance(model1) %>% mutate(Model = "Model 1"),
@@ -245,21 +271,21 @@ result_table <- bind_rows(
 result_table
 
 ```
+Model 1 variables VIF
 
-
-```{r}
+```{r echo=FALSE}
 vif(model1)
 ```
-
-```{r}
+Model 2 variables VIF
+```{r echo=FALSE}
 vif(model2)
 ```
-
-```{r}
+Model 3 variables VIF
+```{r echo=FALSE}
 vif(model3)
 ```
 
-Utilizing our model1 below we can see our predicted TARGET_WINS for the evaluation data.
+Utilizing our model 1 below we can see our predicted TARGET_WINS for the evaluation data.
 
 ```{r include=FALSE}
 # Imputing data in evaluation data using MICE PMM
@@ -268,7 +294,7 @@ evaluation_complete <- complete(evaluation_imp)
 
 ```
 
-```{r}
+```{r echo=FALSE}
 # Predicting win count for evaluation data
 TARGET_WINS <- predict(model1, newdata = evaluation_complete)
 
@@ -276,9 +302,6 @@ evaluation_complete$TARGET_WINS <- TARGET_WINS
 
 evaluation_complete$TARGET_WINS
 ```
-
-
-
 
 
 
