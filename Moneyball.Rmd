@@ -5,13 +5,24 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
+---
+title: "621 MoneyBall"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 # Load Required Libraries
 
 library(tidyverse)
 library(corrplot)
-library(dplyr)
+library(ggplot2)
 library(mice)
+library(broom)
+library(dplyr)
+library(car)
+library(caret)
 ```
 
 
@@ -24,42 +35,55 @@ In this homework assignment we will explore, analyze and model a data set contai
 
 ```{r include=FALSE}
 # Loading the data
+# Read in the training data
+training <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-training-data.csv") %>%
+  select(-INDEX)
 
-training <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-training-data.csv")
-
-training <- training[,-1] # Removing Index
-
-Y <- training[,1] # Target variable
-X <- training[,2:16] # Predictor variables
+# Read in the evaluation data
+evaluation <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/moneyball-evaluation-data.csv")
 ```
 
 ## Data Summary
 
-The moneyball training data set contains 16 variables, excluding the index, and 2,276 observations. Each observational unit represents a single team's statistics for that year's performance. There are 15 predictor variables which are counts of various actions in baseball such as base hits, home runs, strikeouts, stolen bases, caught stealing, hits allows and more. The table in the introduction above provides a list of all variable definitions.   
+The moneyball training data set contains 16 variables, excluding the index, and 2,276 observations. Each observational unit represents a single team's statistics for that year's performance. There are 15 predictor variables which are counts of various actions in baseball such as base hits, home runs, strikeouts, stolen bases, caught stealing, hits allows and more.
 
 
-As seen below in our numerical summary the data contains NA values in certain variables (TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP). These NA values will be addressed in the data preparation. Notably TEAM_BATTING_HBP contains a large amount of NAs at a count of 2085. There is also certain variables with max and min values that deviate significantly from the interquartile ranges such as TEAM_PITCHING_H and TEAM_PITCHING_SO.        
+As seen below in our numerical summary, the data contains NA values in certain variables (TEAM_BATTING_SO, TEAM_BASERUN_SB, TEAM_BASERUN_CS, TEAM_BATTING_HBP, TEAM_PITCHING_SO, and TEAM_FIELDING_DP). These NA values will be addressed in the data preparation. In addition, TEAM_BATTING_HBP contains a large amount of NAs at a count of 2085. There is also certain variables with max values that deviate significantly from the interquartile ranges such as TEAM_PITCHING_H and TEAM_PITCHING_SO.   
+
+```{r}
+glimpse(training)
+```
 
 
-```{r echo=FALSE}
+```{r}
+colSums(is.na(training))
+```
+
+```{r}
 summary(training)
 ```
-## Data Visualizations 
+```{r}
+head(training)
+```
 
-```{r echo=FALSE, warning=FALSE}
+# Data Visualizations 
+
+```{r echo=TRUE, fig.height=6, fig.width=10, warning=FALSE}
 # Reshape to long format
-X_long <- pivot_longer(X, everything(), names_to = "Variable", values_to = "Value")
-
+X_long <- training %>% 
+  select(TARGET_WINS, everything()) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Value")
 
 # Plot distributions
 ggplot(X_long, aes(x = Value)) +
-  geom_histogram(bins = 25, fill = "steelblue", color = "white") +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "steelblue", color = "white") +
+  geom_density(color = "red", size = 1) +
   facet_wrap(~Variable, scales = "free") +
   labs(title = "Distributions of Predictor Variables")
 
 ```
 
-```{r echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
+```{r echo=TRUE, fig.height=6, fig.width=10, warning=FALSE}
 ggplot(X_long, aes(x = Variable, y = Value)) +
   geom_boxplot(fill = "lightblue", outlier.color = "red") +
   facet_wrap(~Variable, scales = "free") +
@@ -70,17 +94,38 @@ ggplot(X_long, aes(x = Variable, y = Value)) +
 
 The histogram and box plots above provide a better understanding of the distribution of our predictor variables. Most variables have a relatively normal distribution where others show strong left and right side skewing. The box plots also clue us into possible data entry errors as may be the case for TEAM_PITCHING_SO.  
 
-```{r echo=FALSE}
+
+```{r echo=TRUE}
 cor_matrix <- cor(training, use = "pairwise.complete.obs")
 corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.8)
 
 ```
+The correlation heat map helps us to see the relationship of variables against the target variable and other predictors. Correlations are mostly what was expected based on the theoretical effect given in the introduction with some exceptions. An example of this can be seen with TEAM_BASERUN_CS where the correlation is slightly positive (0.02240407) when the theoretical effect is to have a negative impact on wins.
 
-The correlation heatmap helps us to see the relationship of variables against the target variable and other predictors. Correlations are mostly what was expected based on the theoretical effect given in the introduction. An example of this can be seen with TEAM_BASERUN_CS where the correlation is slightly positive (0.02240407) when the theoretical effect is to have a negative impact on wins.
+Diving deeper into the outliers for the TEAM_PITCHING_SO (pitchers striking out the opposing team's hitter) variable we can see that the record for these teams also are paired with a 0 TEAM_PITCHING_HR (home runs allowed by the pitchers), and so it stand to reason that these outliers are not data errors. 
 
+```{r}
+top2_rows <- training %>%
+  arrange(desc(TEAM_PITCHING_SO)) %>%
+  slice(1:2)
 
+top2_rows
+```
+
+For the outliers in TEAM_PITCHING_H (hits allowed by pitchers) our distribution shows us that the outliers are likely not data errors either. There are infrequent but other recorded values between our outliers and the IQR of our variable. Our outliers in this variable are plausible real recorded values that happen to fall far on our distribution's right sided tail. 
+
+```{r}
+ggplot(training, aes(x = TEAM_PITCHING_H)) +
+  geom_histogram(binwidth = 700, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Team Pitching Hits",
+       x = "TEAM_PITCHING_H",
+       y = "Frequency") +
+  theme_minimal()
+```
+
+       
 # Data Preparation
-The batter being hit by a pitch was removal as the influence is a factor outsideof the batter's controls and it's not a repeatable skill.
+The variable TEAM_BATTING_HBP which represents a batter being hit by a pitch was removed as the influence is a factor outside of the batter's controls and it's not a repeatable skill. The variable also contained 2,085 NA values out of the total of 2,276 observations.
 
 ```{r}
 Training_prep<-training|>
@@ -89,7 +134,15 @@ Training_prep<-training|>
 str(Training_prep)
 ```
 
-For data imputation we looked at the columns with missing and use imputation on on those columns that have a rate 5% missing data.
+Near zero variance variables are variables with observed values that barely change across observations. Because of this they contribute little to analysis and introduce unnecessary complexity along with multicollinearity risk. No variables were found to be near zero variance as seen below.
+
+```{r}
+nzv_cols <- nearZeroVar(training, saveMetrics = TRUE)
+nzv_cols
+```
+
+
+For data imputation we looked at the columns with missing values and used imputation on those columns that have a rate 5% missing data.
 
 ```{r}
 Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
@@ -106,10 +159,9 @@ Training_imp<-mice(Training_prep,
   complete()
 ```
 
-
 # Multiple Linear Regression Models
 
-### Model 1: All Features
+## Model 1: All Features
 
 ```{r m1}
 model1 = lm(formula = TARGET_WINS ~
@@ -129,7 +181,8 @@ qqnorm(m1_resid)
 qqline(m1_resid)
 ```
 
-### Model 2:
+
+## Model 2:
 
 Drop:
 TEAM_PITCHING_HR for correlation with TEAM_BATTING_HR
@@ -150,10 +203,78 @@ qqnorm(m2_resid)
 qqline(m2_resid)
 ```
 
-```{r variance}
-library(caret)
+## Model 3:
 
-nzv_cols <- nearZeroVar(Training_imp, saveMetrics = TRUE)
+Only taking the high p-values in model 1 and model 2.
+
+```{r m3}
+model3 = lm(formula = TARGET_WINS ~ 
+              TEAM_BATTING_H + TEAM_BATTING_SO + 
+              TEAM_FIELDING_E + TEAM_FIELDING_DP + 
+              TEAM_BATTING_H + TEAM_BATTING_3B + 
+              TEAM_BATTING_HR + TEAM_FIELDING_E,
+            data = Training_imp)
+
+summary(model3)
+
+# Residuals
+m3_resid = model3$residuals
+hist(m3_resid)
+qqnorm(m3_resid)
+qqline(m3_resid)
+```
+
+# Select Models:
+
+While Model 1 has higher multicollinearity in certain predictors, our analysis identified Model 1 as the strongest regression model. It achieved the lowest residual error (12.66) and the highest adjusted R² (0.354), making it the most accurate and reliable predictor of team wins. 
+
+```{r}
+
+result_table <- bind_rows(
+  glance(model1) %>% mutate(Model = "Model 1"),
+  glance(model2) %>% mutate(Model = "Model 2"),
+  glance(model3) %>% mutate(Model = "Model 3")
+) %>%
+  transmute(
+    Model,
+    RSE        = sigma,
+    Adj.R2     = adj.r.squared,
+    F.Statistic = statistic
+  )
+
+result_table
+
+```
+
+
+```{r}
+vif(model1)
+```
+
+```{r}
+vif(model2)
+```
+
+```{r}
+vif(model3)
+```
+
+Utilizing our model1 below we can see our predicted TARGET_WINS for the evaluation data.
+
+```{r include=FALSE}
+# Imputing data in evaluation data using MICE PMM
+evaluation_imp <- mice(evaluation, method = "pmm", m = 5, maxit = 5, seed = 10)
+evaluation_complete <- complete(evaluation_imp)
+
+```
+
+```{r}
+# Predicting win count for evaluation data
+TARGET_WINS <- predict(model1, newdata = evaluation_complete)
+
+evaluation_complete$TARGET_WINS <- TARGET_WINS
+
+evaluation_complete$TARGET_WINS
 ```
 
 
