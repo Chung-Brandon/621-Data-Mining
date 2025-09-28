@@ -3,6 +3,7 @@ title: "621 MoneyBall"
 author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
 date: "`r Sys.Date()`"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -295,14 +296,26 @@ evaluation_complete <- complete(evaluation_imp)
 ```
 
 ```{r echo=FALSE}
-# Predicting win count for evaluation data
+# Generate predictions
 TARGET_WINS <- predict(model1, newdata = evaluation_complete)
 
-evaluation_complete$TARGET_WINS <- TARGET_WINS
+# Round to nearest whole number
+TARGET_WINS_rounded <- round(TARGET_WINS)
 
-evaluation_complete$TARGET_WINS
+# Add to evaluation data
+evaluation_complete$TARGET_WINS <- TARGET_WINS_rounded
+
+# Create exportable data frame
+predictions_df <- data.frame(TARGET_WINS = TARGET_WINS_rounded)
+
+# Write to CSV
+write.csv(predictions_df, "WINS_Predictions.csv", row.names = FALSE)
+
+# View predicted target wins
+
+TARGET_WINS_rounded
+
 ```
-
 
 
 
