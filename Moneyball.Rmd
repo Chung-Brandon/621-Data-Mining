@@ -166,7 +166,7 @@ nzv_cols
 ```
 
 
-For data imputation we looked at the columns with missing values and used imputation on those columns that have a rate 5% missing data.
+For data imputation we looked at the columns with missing values and we used a multiple imputation approach to impute the missing data using MICE predictive mean matching method those columns, as the variable had a high percentage of missing data and the missingness is not completely at random. MICE imputation would be best to preserve the varianc and the correlation structure of the data, a simple imputation wouldn't be ideal as it it would impute with a fixed number leading to an underestimates variance, the simple imputation would also be bias ignoring the relationships between the variables.
 
 ```{r echo=FALSE}
 Missing <- (colSums(is.na(Training_prep)) / 2276) * 100
