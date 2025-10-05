@@ -203,10 +203,43 @@ co_spec
 **ANSWER:**
 
 ```{r}
+#F1 Function
+F1_Score=function(df, actual_col, predicted_col, positive){
+  actual<-df[[actual_col]]
+  predicted<-df[[predicted_col]]
+  
+  #True positive, false negative, and false positive for precision and recall
+  TP<- sum(predicted==positive & actual==positive)
+  FN <- sum(predicted!=positive & actual==positive)
+  FP <- sum(predicted==positive & actual!=positive)
+  
+  #Precision and recall caulation, handle possible NaN  due to division by 0
+  co_prec<-if ((TP+FP)==0)0 else TP/ (TP + FP)
+  co_recall<-if ((TP+FN)==0)0 else TP/(TP + FN)
+  
 
+  #F1 score
+  if(co_prec+co_recall == 0){
+    return(0)
+  }else {
+    return((2* co_prec *co_recall)/(co_prec+co_recall))
+  }
+}
+
+
+#Calculate F1
+F1_co_df<-F1_Score(co_df, "class", "scored.class", positive = 1)
+print(F1_co_df)
 
 ```
 
+
+
+```{r}
+#check work
+F1Manually<-(2*.8437*.4737)/(.8437+.4737)
+print(F1Manually)
+```
 
 
 
@@ -216,11 +249,16 @@ that the F1 score will always be between 0 and 1. (Hint: If 0 < 𝑎 < 1 and 0 <
 
 **ANSWER:**
 
+
+F1=0 when either the precision or sensitivity is 0, F1=1 when both prescision and sensitivity are 1. F1 would be a score in between 0 and 1 when the is a balance between precision and recall. Since precision and sensitive are non negative F1 score will be non negative when prescisiona nd sensitive are multiplied or added together. The hint 0 < 𝑎 < 1 and 0 < 𝑏 < 1 then 𝑎𝑏 < 𝑎, shows that the harmonic mean is less than or equal to the arthmetic mean, and less than or equal to the minimum of it components; the product of two values less than 1 is smaller than either value individually, keeping F1 less than or equal to both precision and sensitivity.
+
 ```{r}
-
-
+#prescision max of 1 and a min of 1, sensitivity max of 1 and a min of 0
+presc<- runif(50, min=0, max=1)
+sensi<-runif(50, min=0, max=1)
+f1_bound<-(2*presc*sensi)/(presc+sensi)
+summary(f1_bound)
 ```
-
 
 
 
