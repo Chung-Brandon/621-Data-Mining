@@ -271,8 +271,51 @@ that includes the plot of the ROC curve and a vector that contains the calculate
 **ANSWER:**
 
 ```{r}
+generate_roc <- function(df, class_col = "class", prob_col = "scored.probability") {
+
+  # Extract true labels and predicted probabilities
+  true_labels <- df[[class_col]]
+  predicted_probs <- df[[prob_col]]
+  
+  # Initialize vectors for TPR and FPR
+  thresholds <- seq(0, 1, by = 0.01)
+  tpr <- numeric(length(thresholds))
+  fpr <- numeric(length(thresholds))
+  
+  for (i in seq_along(thresholds)) {
+    threshold <- thresholds[i]
+    predicted_class <- ifelse(predicted_probs >= threshold, 1, 0)
+    
+    tp <- sum(predicted_class == 1 & true_labels == 1)
+    fp <- sum(predicted_class == 1 & true_labels == 0)
+    fn <- sum(predicted_class == 0 & true_labels == 1)
+    tn <- sum(predicted_class == 0 & true_labels == 0)
+    
+    tpr[i] <- ifelse((tp + fn) == 0, 0, tp / (tp + fn))
+    fpr[i] <- ifelse((fp + tn) == 0, 0, fp / (fp + tn))
+  }
+  
+# Calculate AUC using trapezoidal rule
+  
+roc_df <- data.frame(FPR = fpr, TPR = tpr)
+roc_df <- roc_df[order(roc_df$FPR), ]  # Ensure FPR is increasing
+auc <- sum(diff(roc_df$FPR) * (head(roc_df$TPR, -1) + tail(roc_df$TPR, -1)) / 2)
+  
+# Create ROC plot
+
+roc_plot <- ggplot(roc_df, aes(x = FPR, y = TPR)) +
+  geom_line(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "ROC Curve", x = "False Positive Rate", y = "True Positive Rate") +
+  theme_minimal()
+  
+return(list(plot = roc_plot, auc = auc))
+}
 
 
+result <- generate_roc(co_df)
+print(result$plot)
+print(result$auc)
 ```
 
 
@@ -285,8 +328,31 @@ classification metrics discussed above.
 **ANSWER:**
 
 ```{r}
+classification_metrics <- function(df, actual_col, predicted_col, prob_col, positive = 1, threshold = 0.5) {
+  # Metrics
+  accuracy    <- prediction_accuracy(df, actual_col, predicted_col)
+  error_rate  <- error_rate(df, actual_col, predicted_col)
+  precision   <- pred_precision(df, actual_col, predicted_col)
+  recall      <- sensitivity(df, actual_col, predicted_col)
+  specificity <- specificity(df, actual_col, predicted_col)
+  f1_score    <- F1_Score(df, actual_col, predicted_col, positive = 1)
+  
+  # AUC
+  roc_result <- generate_roc(df, actual_col,prob_col)
+  
+  return(list(
+    accuracy    = accuracy,
+    error_rate  = error_rate,
+    precision   = precision,
+    sensitivity = recall,
+    specificity = specificity,
+    f1_score    = f1_score,
+    auc         = roc_result$auc
+  ))
+}
 
-
+metrics <- classification_metrics(co_df,"class","scored.class","scored.probability")
+metrics
 ```
 
 
