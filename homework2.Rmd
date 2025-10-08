@@ -12,6 +12,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(caret)
+library(knitr)
 set.seed(101)
 ```
 
@@ -363,9 +365,22 @@ metrics
 specificity. Apply the functions to the data set. How do the results compare with your own functions?
 
 **ANSWER:**
+When comparing the sensitivity and specficity results from the caret package compare to our created functions, we saw the values were the same.
 
 ```{r}
+#Need to be factors to use confusionMatrix
+co_df$scored.class<-as.factor(co_df$scored.class)
+co_df$class<-as.factor(co_df$class)
 
+b<-confusionMatrix(co_df$scored.class, co_df$class, positive="1")
+
+caret_fn<-c(b$byClass["Sensitivity"], b$byClass["Specificity"])
+Our_function<-c(sensitivity(co_df, "class", "scored.class"), specificity(co_df, "class", "scored.class"))
+
+#will use cbind to create a table, using kable from knitr
+c<-cbind(caret_fn, Our_function)
+
+kable(c)
 
 ```
 
