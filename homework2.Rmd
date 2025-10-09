@@ -3,7 +3,7 @@ title: "Homework 2"
 author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
 date: "Fall 2025"
 output:
-  #pdf_document: default
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -386,14 +386,17 @@ kable(c)
 
 
 
-
-
 13. Investigate the pROC package. Use it to generate an ROC curve for the data set. How do the results
 compare with your own functions?
 
 **ANSWER:**
+The pROC package area under the curve is 0.850, our value of the area under the curve is 0.8484012. The pROC result seems to match well with our result. This 1% difference is likely due to natural variation between the two methods and falls within an acceptable range.
 
 ```{r}
+library(pROC)
+proc_plot <- roc(co_df$class,co_df$scored.probability, plot = T, print.auc = T)
 
-
+proc_plot
 ```
+
+
