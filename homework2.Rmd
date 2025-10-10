@@ -3,9 +3,12 @@ title: "Homework 2"
 author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
 date: "Fall 2025"
 output:
-  pdf_document: default
-  html_document:
-    df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+header-includes:
+  - \usepackage{unicode-math}
+  - \setmathfont{Latin Modern Math}
 ---
 
 ```{r setup, include=FALSE}
@@ -48,10 +51,9 @@ In the above confusion matrix outputted using `table()`, the columns represent t
 
 3. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the accuracy of the predictions.
 
-𝐴𝑐𝑐𝑢𝑟𝑎𝑐𝑦 =
-𝑇𝑃 + 𝑇𝑁
--------------------------
-𝑇𝑃 + 𝐹𝑃 + 𝑇𝑁 + 𝐹𝑁
+$$
+\text{Accuracy} = \frac{TP + TN}{TP + FP + TN + FN}
+$$
 
 **ANSWER:**
 
@@ -80,11 +82,9 @@ co_accuracy
 
 4. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the classification error rate of the predictions.
 
-𝐶𝑙𝑎𝑠𝑠𝑖𝑓𝑖𝑐𝑎𝑡𝑖𝑜𝑛 𝐸𝑟𝑟𝑜𝑟 𝑅𝑎𝑡𝑒 =
-𝐹𝑃 + 𝐹𝑁
--------------------------
-𝑇𝑃 + 𝐹𝑃 + 𝑇𝑁 + 𝐹𝑁
-
+$$
+\text{Classification Error Rate} = \frac{FP + FN}{TP + FP + TN + FN}
+$$
 Verify that you get an accuracy and an error rate that sums to one.
 
 **ANSWER:**
@@ -116,10 +116,9 @@ co_accuracy + co_errors == 1
 
 5. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the precision of the predictions.
 
-𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 =
-𝑇𝑃
------------
-𝑇𝑃 + 𝐹𝑃
+$$
+\text{Precision} = \frac{TP}{TP + FP}
+$$
 
 **ANSWER:**
 
@@ -143,10 +142,9 @@ co_prec
 
 6. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the sensitivity of the predictions. Sensitivity is also known as recall.
 
-𝑆𝑒𝑛𝑠𝑖𝑡𝑖𝑣𝑖𝑡𝑦 =
-𝑇𝑃
------------
-𝑇𝑃 + 𝐹𝑁
+$$
+\text{Sensitivity} = \frac{TP}{TP + FN}
+$$
 
 **ANSWER:**
 
@@ -170,10 +168,9 @@ co_recall
 
 7. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the specificity of the predictions.
 
-𝑆𝑝𝑒𝑐𝑖𝑓𝑖𝑐𝑖𝑡𝑦 =
-𝑇𝑁
------------
-𝑇𝑁 + 𝐹𝑃
+$$
+\text{Specificity} = \frac{TN}{TN + FP}
+$$
 
 **ANSWER:**
 
@@ -197,10 +194,9 @@ co_spec
 
 8. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the F1 score of the predictions.
 
-𝐹1 𝑆𝑐𝑜𝑟𝑒 =
-2 × 𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 × 𝑆𝑒𝑛𝑠𝑖𝑡𝑖𝑣𝑖𝑡𝑦
------------------------------------------------
-𝑃𝑟𝑒𝑐𝑖𝑠𝑖𝑜𝑛 + 𝑆𝑒𝑛𝑠𝑖𝑡𝑖𝑣𝑖𝑡𝑦
+$$
+\text{F1 Score} = \frac{2 \times \text{Precision} \times \text{Sensitivity}}{\text{Precision} + \text{Sensitivity}}
+$$
 
 **ANSWER:**
 
@@ -398,5 +394,8 @@ proc_plot <- roc(co_df$class,co_df$scored.probability, plot = T, print.auc = T)
 
 proc_plot
 ```
+
+
+
 
 
