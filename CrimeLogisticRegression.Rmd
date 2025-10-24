@@ -39,15 +39,16 @@ the variables of interest in the data set:
 Crime_train<-read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-training-data_modified.csv")
 
 Crime_eval<-read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-evaluation-data_modified.csv")
-
-glimpse(Crime_train)
 ```
 
+## DATA EXPLORATION
+```{r}
+summary(Crime_train)
+```
 ```{r}
 summary(Crime_train)
 ```
 
-## DATA EXPLORATION
 ```{r}
 
 ```
