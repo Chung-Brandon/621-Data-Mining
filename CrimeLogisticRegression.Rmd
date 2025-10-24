@@ -43,6 +43,10 @@ Crime_eval<-read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-M
 glimpse(Crime_train)
 ```
 
+```{r}
+summary(Crime_train)
+```
+
 ## DATA EXPLORATION
 ```{r}
 
