@@ -61,6 +61,7 @@ sapply(Crime_train[,-which(names(Crime_train)=="target")],sd)
 ```
 
 Visual exploration
+The average number of rooms per dwelling had a higher mean with a lower crime rate, indicating neighborhoods with low crime rate have more rooms and neighborhood with higher crime rate had less room. The lower status of the population (percent) boxplot shows the nieghborhood with more low-status residents had a higher crime rate. The Correlation plot shows that there may be a potential multicollinearity as the target variable has a strong positive correlation with nox, rad, tax, and age.
 ```{r}
 boxplot(rm~target, data=Crime_train, main="Average Rooms by Crime Level")
 boxplot(lstat ~target, data=Crime_train, main="Lower Status Percent by Crime Level")
@@ -68,7 +69,7 @@ boxplot(lstat ~target, data=Crime_train, main="Lower Status Percent by Crime Lev
 corrplot(cor(Crime_train[, sapply(Crime_train, is.numeric)]), method = "number", number.cex = 0.8)
 ```
 
-Correlation with target. Looked as which predictor might be influential
+Correlation with target. Looked as which predictor might be influential.
 ```{r}
 correlation<-cor(Crime_train[, -which(names(Crime_train)=="chas")], Crime_train$target)
 sort(correlation[,1], decreasing = TRUE)
