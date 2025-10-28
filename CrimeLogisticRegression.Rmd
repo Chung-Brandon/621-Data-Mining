@@ -42,15 +42,35 @@ Crime_eval<-read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-M
 ```
 
 ## DATA EXPLORATION
+The the dataset has 350 observations with 13 predictors
 ```{r}
-summary(Crime_train)
+glimpse(Crime_train)
 ```
 ```{r}
 summary(Crime_train)
 ```
-
+Checked for number of missing data in each columns. None were found.
 ```{r}
+colSums(is.na(Crime_train)) 
+```
 
+Calculated standard deviation
+```{r}
+sapply(Crime_train[,-which(names(Crime_train)=="target")],sd)
+```
+
+Visual exploration
+```{r}
+boxplot(rm~target, data=Crime_train, main="Average Rooms by Crime Level")
+boxplot(lstat ~target, data=Crime_train, main="Lower Status Percent by Crime Level")
+
+corrplot(cor(Crime_train[, sapply(Crime_train, is.numeric)]), method = "number", number.cex = 0.8)
+```
+
+Correlation with target. Looked as which predictor might be influential
+```{r}
+correlation<-cor(Crime_train[, -which(names(Crime_train)=="chas")], Crime_train$target)
+sort(correlation[,1], decreasing = TRUE)
 ```
 
 
