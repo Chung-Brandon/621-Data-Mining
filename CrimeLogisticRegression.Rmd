@@ -7,6 +7,7 @@ output: html_document
 
 ```{r Load libraries}
 library(tidyverse)
+library(corrplot)
 ```
 
 # DATA 621: BUSINESS ANALYTICS AND DATA MINING
