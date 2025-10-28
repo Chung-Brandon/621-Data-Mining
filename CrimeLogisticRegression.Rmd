@@ -43,7 +43,7 @@ Crime_eval<-read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-M
 ```
 
 ## DATA EXPLORATION
-The the dataset has 350 observations with 13 predictors
+The the dataset has 466 observations with 13 predictors
 ```{r}
 glimpse(Crime_train)
 ```
