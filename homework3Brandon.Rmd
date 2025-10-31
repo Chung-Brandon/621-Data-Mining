@@ -1,0 +1,365 @@
+---
+title: "Homework 3"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "Fall 2025"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+### Overview
+In this homework assignment, you will explore, analyze and model a data set containing information on
+crime for various neighborhoods of a major city. Each record has a response variable indicating whether
+or not the crime rate is above the median crime rate (1) or not (0).
+Your objective is to build a binary logistic regression model on the training data set to predict whether
+the neighborhood will be at risk for high crime levels. You will provide classifications and probabilities
+for the evaluation data set using your binary logistic regression model. You can only use the variables
+given to you (or, variables that you derive from the variables provided). Below is a short description of
+the variables of interest in the data set:
+• zn: proportion of residential land zoned for large lots (over 25000 square feet) (predictor variable)
+• indus: proportion of non-retail business acres per suburb (predictor variable)
+• chas: a dummy var. for whether the suburb borders the Charles River (1) or not (0) (predictor variable)
+• nox: nitrogen oxides concentration (parts per 10 million) (predictor variable)
+• rm: average number of rooms per dwelling (predictor variable)
+• age: proportion of owner-occupied units built prior to 1940 (predictor variable)
+• dis: weighted mean of distances to five Boston employment centers (predictor variable)
+• rad: index of accessibility to radial highways (predictor variable)
+• tax: full-value property-tax rate per $10,000 (predictor variable)
+• ptratio: pupil-teacher ratio by town (predictor variable)
+• lstat: lower status of the population (percent) (predictor variable)
+• medv: median value of owner-occupied homes in $1000s (predictor variable)
+• target: whether the crime rate is above the median crime rate (1) or not (0) (response variable)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(caret)
+library(pROC)
+library(MASS)
+library(car)
+library(corrplot)
+library(GGally)
+library(forecast)
+library(tibble)
+library(knitr)
+
+```
+
+
+### I. Data Exploration:
+
+There are two files provided:
+ - crime-training-data_modified.cvs
+ - crime-evolution-data_modified.cvs
+ 
+The training data contains 13 variables and 466 observations, all with positive numeric values.  
+
+```{r}
+train_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-training-data_modified.csv")
+test_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-evaluation-data_modified.csv")
+```
+
+```{r}
+str(train_df)
+```
+
+```{r}
+glimpse(train_df)
+```
+```{r}
+glimpse(test_df)
+```
+
+#### 1. Summary
+
+- We observe there is no missing value in the data (no NA's).
+- Based on the summary statistics below, it appears we have many means that are far from the median, it indicating a skewed distribution. 
+
+
+```{r}
+summary(train_df)
+```
+
+#### 2. Distributions
+
+```{r}
+# Change the columns' type, make sure is categorical variable
+train_df <- train_df %>%
+  mutate(
+    chas   = as.factor(chas),
+    target = as.factor(target)
+  )
+
+test_df <- test_df %>%
+  mutate(
+    chas = as.factor(chas)
+  )
+
+```
+
+
+- The bar chart shows that neighborhoods with low and high rime rate are nearly equal.
+```{r}
+ggplot(train_df, aes(x = target, fill = target)) +
+  geom_bar(width = 0.6) +
+  scale_fill_manual(values = c("#69b3a2", "#d95f02"),
+                    labels = c("Low Crime (0)", "High Crime (1)")) +
+  labs(
+    title = "Distribution of Target Variable (Crime Risk)",
+    x = "Target (0 = Not Above the Median Crime Rate, 1 = Above the Median Crime Rate)",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+```
+
+- Next, we visualize the distribution for each predictor variables. 
+- The distribution profiles show the dis, lstat, nox, rm, zn are right skewed, specially dis, and lstat.
+- We also note that age and ptratio are left skewed
+
+
+```{r}
+num_df <- train_df %>%
+  as_tibble() %>% 
+  dplyr::select(where(is.numeric)) %>% 
+  dplyr::select(-any_of("target"))  
+
+# Reshape to long format
+gather_df <- num_df %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+# Histogram plot
+ggplot(gather_df, aes(x = value)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "grey40", alpha = 0.9) +
+  geom_density(color = "blue", linewidth = 0.7, adjust = 1.1) +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  labs(title = "Distribution of Numeric Predictor Variables",
+       y = "Density", x = NULL) +
+  theme_minimal(base_size = 13)
+
+```
+
+
+
+- Looking at the box plots below, we can see there are significant outliers in agem dis, indus, lstat, medv, ptratio, rm, tax, and zn, they may need to be imputed if necessary. 
+
+```{r, fig.height = 10, fig.width = 10, echo=FALSE}
+long_box <- train_df %>%
+  pivot_longer(cols = c(zn, indus, nox, rm, age, dis, rad, tax, ptratio, lstat, medv),
+               names_to = "var", values_to = "value")
+
+ggplot(long_box, aes(x = target, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~ var, scales = "free_y") +
+  labs(title = "Distributions by Target (0=low crime, 1=high crime)")
+
+```
+
+- Going though the heatmap, we can see which variables are correlated to be included together in a model as predictor variables. This will help us later during the model selection process.
+- With a threshold of 0.90 we can see that variables rad and tax are highly correlated, with a correlation 0.91.
+
+```{r}
+# Select only numeric predictor variables
+num_vars <- train_df %>%
+  dplyr::select(where(is.numeric)) %>%
+  dplyr::select(-any_of("target"))
+
+
+# Compute the correlation matrix
+corr_matrix <- cor(num_vars)
+
+# Plot correlation heatmap
+corrplot(
+  corr_matrix,
+  method = "color",
+  type = "upper", 
+  order = "hclust",
+  addCoef.col = "black", 
+  tl.col = "black", 
+  tl.srt = 45, 
+  number.cex = 0.6,
+  col = colorRampPalette(c("darkred", "white", "darkblue"))(200)
+)
+```
+```{r}
+# Set threshold
+threshold <- 0.9
+
+# Identifying highly correlated predictors
+high_corr_vars <- which(abs(corr_matrix) > threshold & lower.tri(corr_matrix), arr.ind = TRUE)
+data.frame(
+  Var1 = rownames(corr_matrix)[high_corr_vars[, 1]],
+  Var2 = colnames(corr_matrix)[high_corr_vars[, 2]],
+  Correlation = corr_matrix[high_corr_vars]
+)
+
+```
+
+### II. Data Preparation:
+
+#### a. Missing Data
+
+There is no missing values in our predictors, so there will be no need to impute any variables.
+
+```{r}
+sapply(train_df, function(x) sum(is.na(x)))
+```
+#### b. Near Zero Variance
+
+There are no predictors with near zero variance, so there is no need to remove predictors based on non significance / noise reduction.  
+
+```{r}
+nzv <- nearZeroVar(train_df, saveMetrics = TRUE)
+nzv
+```
+
+#### c. Outliers
+- In our analysis we chose keep the outliers. Several predictors such as nox, lstat, and dis exhibited noticeable skewness and data points far from their IQRs, but it seems the values represent real neighborhood's data and are not structural or data entry errors. After reviewing the stated variables, the data points will be treated as leverage points and add generalizability to our resulting model.    
+
+
+#### d. Multicolinearity 
+- Through our variable correlation heatmap and correlation check we discovered that rad and tax have a correlation of 0.91. For one of our models to be tested, from this highly correlated pair we will drop rad to reduce multicolinearity based on domain relevance of tax. Tax is a more direct indicator of social economic status and likely has a greater impact on crime. 
+
+
+#### e. Transform Skewed Variables
+- Some of the variables in our data display skew and non-constant variance. To combat this we applied either box-cox or logarithmic transformation. Box-cox transformation was used on rm and nox. For our variables dis, zn, and lstat there is noticable right sided skew so log transformation was applied.
+
+```{r}
+# Box–Cox lambdas learned on train_df
+rm_lambda  <- BoxCox.lambda(train_df$rm)
+nox_lambda <- BoxCox.lambda(train_df$nox)
+
+# Append transformed columns to train_df
+train_df_transformed <- train_df %>%
+  mutate(
+    rm_bx     = BoxCox(rm,  rm_lambda),
+    nox_bx    = BoxCox(nox, nox_lambda),
+    dis_log   = log(dis + 1),
+    zn_log1   = log(zn + 1),
+    lstat_log = log(lstat)
+  )
+
+# Apply same to test_df
+test_df_transformed <- test_df %>%
+  mutate(
+    rm_bx     = BoxCox(rm,  rm_lambda),
+    nox_bx    = BoxCox(nox, nox_lambda),
+    dis_log   = log(dis + 1),
+    zn_log1   = log(zn + 1),
+    lstat_log = log(lstat)
+  )
+
+```
+
+```{r}
+plot <- c("nox","lstat","dis","rm","zn")
+plot_df <- train_df_transformed %>%
+  dplyr::select(dplyr::any_of(c(plot,
+                                paste0(c("nox","lstat","dis","rm","zn"),
+                                       c("_bx","_log","_log","_bx","_log1"))))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value")
+
+ggplot(plot_df, aes(x = value)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "grey70") +
+  geom_density(color = "blue", linewidth = 0.7) +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  labs(title = "Original vs Transformed (Selected Variables)", x = NULL, y = "Density") +
+  theme_minimal(base_size = 13)
+```
+### III. Build Models:
+
+#### Model A: Original data baseline
+```{r}
+# Model A: Baseline
+modA <- glm(target ~ ., data = train_df, family = binomial())
+summary(modA)
+
+```
+
+#### Model B: Transformed data — check improvement
+```{r}
+modB <- glm(target ~ chas + zn_log1 + indus + nox_bx + rm_bx + age +
+              dis_log + rad + tax + ptratio + lstat_log + medv,
+            data = train_df_transformed, family = binomial())
+summary(modB)
+```
+
+
+#### Model C: Stepwise selection with transformed data — check if a smaller model can perform equally well
+
+```{r}
+modC <- stepAIC(modB, direction = "both")
+summary(modC)
+```
+
+#### Model D: Original data - rad removed
+
+```{r}
+# Model D: Original with rad removed
+train_df_rad <- subset(train_df, select = -rad)
+
+modD <- glm(target ~ ., data = train_df_rad, family = binomial())
+summary(modD)
+
+```
+#### Model E: Transformed data - rad removed
+
+```{r}
+# Model E: Transformed data with rad removed
+modE <- glm(target ~ chas + zn_log1 + indus + nox_bx + rm_bx + age +
+              dis_log + tax + ptratio + lstat_log + medv,
+            data = train_df_transformed, family = binomial())
+summary(modE)
+```
+#### Model F: Stepwise selection with original data
+
+```{r warning=FALSE}
+modF <- stepAIC(modA, direction = "both")
+summary(modC)
+```
+
+### IV: Model Selection:
+- Model B (transformed data including rad) performed best overall and is the model we will use to make predictions on the test data. Model B provided the highest accuracy (0.918), F1 (0.916), and Rsquared (0.704) while also providing the lowest deviance (191.47) and decent AIC (217.47) (less than the original model but greater than the stepwise models). These results suggest that the variable rad was an impactful predictor, and that transforming specific predictors via box-cox and log improved linearity in the logit and stabilized variance for the model. The stepwise AIC model C performed slightly worse in accuracy and F1 although provided a tradeoff with its lower AIC.     
+
+```{r}
+# Function for model metrics
+get_summary_metrics <- function(model, data, label = "Model") {
+  prob <- predict(model, newdata = data, type = "response")
+  pred <- ifelse(prob >= 0.5, 1, 0)
+
+  cm <- caret::confusionMatrix(as.factor(pred), data$target, positive = "1")
+  
+# For r^2 and Deviance
+  dev <- model$deviance
+  null_dev <- model$null.deviance
+  r2 <- 1 - (dev / null_dev)
+  
+  tibble(
+    Model     = label,
+    Accuracy  = round(cm$overall["Accuracy"], 3),
+    F1        = round(cm$byClass["F1"], 3),
+    Deviance  = round(dev, 2),
+    R2        = round(r2, 3),
+    AIC       = round(model$aic, 2)
+  )
+}
+
+# Combine all models
+summary_table <- bind_rows(
+  get_summary_metrics(modA, train_df, "Model A: Original"),
+  get_summary_metrics(modB, train_df_transformed, "Model B: Transformed"),
+  get_summary_metrics(modC, train_df_transformed, "Model C: Stepwise with Transformed"),
+  get_summary_metrics(modD, train_df_rad, "Model D: Original - rad Removed"),
+  get_summary_metrics(modE, train_df_transformed, "Model E: Transformed - rad Removed"),
+  get_summary_metrics(modF, train_df, "Model F: Stepwise with Original")
+)
+
+# Print a table
+kable(summary_table, caption = "Model Comparison Summary (Training Set)")
+
+```
+
