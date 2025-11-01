@@ -17,19 +17,20 @@ the neighborhood will be at risk for high crime levels. You will provide classif
 for the evaluation data set using your binary logistic regression model. You can only use the variables
 given to you (or, variables that you derive from the variables provided). Below is a short description of
 the variables of interest in the data set:
-• zn: proportion of residential land zoned for large lots (over 25000 square feet) (predictor variable)
-• indus: proportion of non-retail business acres per suburb (predictor variable)
-• chas: a dummy var. for whether the suburb borders the Charles River (1) or not (0) (predictor variable)
-• nox: nitrogen oxides concentration (parts per 10 million) (predictor variable)
-• rm: average number of rooms per dwelling (predictor variable)
-• age: proportion of owner-occupied units built prior to 1940 (predictor variable)
-• dis: weighted mean of distances to five Boston employment centers (predictor variable)
-• rad: index of accessibility to radial highways (predictor variable)
-• tax: full-value property-tax rate per $10,000 (predictor variable)
-• ptratio: pupil-teacher ratio by town (predictor variable)
-• lstat: lower status of the population (percent) (predictor variable)
-• medv: median value of owner-occupied homes in $1000s (predictor variable)
-• target: whether the crime rate is above the median crime rate (1) or not (0) (response variable)
+
+- **zn**: proportion of residential land zoned for large lots (over 25000 square feet) (predictor variable)
+- **indus**: proportion of non-retail business acres per suburb (predictor variable)
+- **chas**: a dummy var. for whether the suburb borders the Charles River (1) or not (0) (predictor variable)
+- **nox**: nitrogen oxides concentration (parts per 10 million) (predictor variable)
+- **rm**: average number of rooms per dwelling (predictor variable)
+- **age**: proportion of owner-occupied units built prior to 1940 (predictor variable)
+- **dis**: weighted mean of distances to five Boston employment centers (predictor variable)
+- **rad**: index of accessibility to radial highways (predictor variable)
+- **tax**: full-value property-tax rate per $10,000 (predictor variable)
+- **ptratio**: pupil-teacher ratio by town (predictor variable)
+- **lstat**: lower status of the population (percent) (predictor variable)
+- **medv**: median value of owner-occupied homes in $1000s (predictor variable)
+- **target**: whether the crime rate is above the median crime rate (1) or not (0) (response variable)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -407,6 +408,41 @@ results <- evaluate_modelB(modB, train_df_transformed, outcome_var = "outcome")
 print(results)
 
 ```
+
+### ROC comparsion
+Using ROC we are able to see that Model B had the best performance.
+
+```{r}
+predA<-predict(modA, newdata = train_df, type="response")
+predB<-predict(modB, newdata = train_df_transformed, type="response")
+predC<-predict(modC, newdata = train_df_transformed, type="response")
+predD<-predict(modD, newdata = train_df_rad, type="response")
+predE<-predict(modE, newdata = train_df_transformed, type="response")
+predF<-predict(modF, newdata = train_df, type="response")
+
+par(mfrow=c(2,2))
+par(mai=c(.3,.3,.3,.3))
+roc1 <- roc(train_df$target, predA, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model A: ROC")
+roc2 <- roc(train_df_transformed$target, predB, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model B: ROC")
+roc3 <- roc(train_df_transformed$target, predC, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model C: ROC")
+roc4 <- roc(train_df_rad$target, predD, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model D: ROC")
+roc5 <- roc(train_df_transformed$target, predE, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model E: ROC")
+roc6 <- roc(train_df$target, predF, plot = TRUE,
+            print.auc = TRUE, show.thres = TRUE)
+title(main = "Model F: ROC")
+```
+
+
 #### Making Predicitons on the test_df_transformed data frame using Model B
 
 ```{r echo=FALSE}
@@ -424,5 +460,6 @@ print(test_pred_class)
 write.csv(test_df_transformed, file = "homework3_predictions.csv", row.names = FALSE)
 
 ```
+
 
 
