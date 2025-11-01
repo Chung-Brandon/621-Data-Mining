@@ -53,12 +53,13 @@ library(knitr)
 ### I. Data Exploration:
 
 There are two files provided:
+
  - crime-training-data_modified.cvs
  - crime-evolution-data_modified.cvs
  
 The training data contains 13 variables and 466 observations, all with positive numeric values.  
 
-```{r}
+```{r include=FALSE}
 train_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-training-data_modified.csv")
 test_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/crime-evaluation-data_modified.csv")
 ```
@@ -67,10 +68,10 @@ test_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mi
 str(train_df)
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 glimpse(train_df)
 ```
-```{r}
+```{r eval=FALSE, include=FALSE}
 glimpse(test_df)
 ```
 
@@ -86,7 +87,7 @@ summary(train_df)
 
 #### 2. Distributions
 
-```{r}
+```{r echo=FALSE}
 # Change the columns' type, make sure is categorical variable
 train_df <- train_df %>%
   mutate(
@@ -103,7 +104,7 @@ test_df <- test_df %>%
 
 
 - The bar chart shows that neighborhoods with low and high rime rate are nearly equal.
-```{r}
+```{r echo=FALSE}
 ggplot(train_df, aes(x = target, fill = target)) +
   geom_bar(width = 0.6) +
   scale_fill_manual(values = c("#69b3a2", "#d95f02"),
@@ -122,7 +123,7 @@ ggplot(train_df, aes(x = target, fill = target)) +
 - We also note that age and ptratio are left skewed
 
 
-```{r}
+```{r echo=FALSE}
 num_df <- train_df %>%
   as_tibble() %>% 
   dplyr::select(where(is.numeric)) %>% 
@@ -162,7 +163,7 @@ ggplot(long_box, aes(x = target, y = value)) +
 - Going though the heatmap, we can see which variables are correlated to be included together in a model as predictor variables. This will help us later during the model selection process.
 - With a threshold of 0.90 we can see that variables rad and tax are highly correlated, with a correlation 0.91.
 
-```{r}
+```{r echo=FALSE}
 # Select only numeric predictor variables
 num_vars <- train_df %>%
   dplyr::select(where(is.numeric)) %>%
@@ -185,7 +186,7 @@ corrplot(
   col = colorRampPalette(c("darkred", "white", "darkblue"))(200)
 )
 ```
-```{r}
+```{r echo=FALSE}
 # Set threshold
 threshold <- 0.9
 
@@ -203,16 +204,18 @@ data.frame(
 
 #### a. Missing Data
 
+
 There is no missing values in our predictors, so there will be no need to impute any variables.
 
-```{r}
+```{r echo=FALSE}
 sapply(train_df, function(x) sum(is.na(x)))
 ```
 #### b. Near Zero Variance
 
+
 There are no predictors with near zero variance, so there is no need to remove predictors based on non significance / noise reduction.  
 
-```{r}
+```{r echo=FALSE}
 nzv <- nearZeroVar(train_df, saveMetrics = TRUE)
 nzv
 ```
@@ -255,7 +258,7 @@ test_df_transformed <- test_df %>%
 
 ```
 
-```{r}
+```{r echo=FALSE}
 plot <- c("nox","lstat","dis","rm","zn")
 plot_df <- train_df_transformed %>%
   dplyr::select(dplyr::any_of(c(plot,
@@ -325,8 +328,8 @@ summary(modC)
 ### IV: Model Selection:
 - Model B (transformed data including rad) performed best overall and is the model we will use to make predictions on the test data. Model B provided the highest accuracy (0.918), F1 (0.916), and Rsquared (0.704) while also providing the lowest deviance (191.47) and decent AIC (217.47) (less than the original model but greater than the stepwise models). These results suggest that the variable rad was an impactful predictor, and that transforming specific predictors via box-cox and log improved linearity in the logit and stabilized variance for the model. The stepwise AIC model C performed slightly worse in accuracy and F1 although provided a tradeoff with its lower AIC.     
 
-```{r}
-# Function for model metrics
+```{r echo=FALSE}
+# Function for metrics to compare all models
 get_summary_metrics <- function(model, data, label = "Model") {
   prob <- predict(model, newdata = data, type = "response")
   pred <- ifelse(prob >= 0.5, 1, 0)
@@ -362,4 +365,64 @@ summary_table <- bind_rows(
 kable(summary_table, caption = "Model Comparison Summary (Training Set)")
 
 ```
+
+#### Evaluating Model B wtih accuracy, classification error rate, precision, sensitivity, specificity, f1 score, AUC and confusion matrix
+
+```{r echo=FALSE}
+evaluate_modelB <- function(model, data, outcome_var, threshold = 0.5) {
+  
+  # Generate predicted probabilities
+  prob <- predict(model, newdata = data, type = "response")
+  pred <- factor(ifelse(prob > threshold, 1, 0), levels = c(0, 1))
+  
+  # Confusion matrix
+  cm <- confusionMatrix(pred, train_df_transformed$target, positive = "1")
+  
+  # Metrics
+  accuracy <- cm$overall["Accuracy"]
+  error_rate <- 1 - accuracy
+  precision <- cm$byClass["Precision"]
+  sensitivity <- cm$byClass["Sensitivity"]
+  specificity <- cm$byClass["Specificity"]
+  f1 <- cm$byClass["F1"]
+  auc <- roc(train_df_transformed$target, prob)$auc
+  
+  # Output
+  list(
+    ConfusionMatrix = cm$table,
+    Accuracy = accuracy,
+    ClassificationErrorRate = error_rate,
+    Precision = precision,
+    Sensitivity = sensitivity,
+    Specificity = specificity,
+    F1_Score = f1,
+    AUC = auc
+  )
+  
+}
+
+results <- evaluate_modelB(modB, train_df_transformed, outcome_var = "outcome")
+
+
+print(results)
+
+```
+#### Making Predicitons on the test_df_transformed data frame using Model B
+
+```{r echo=FALSE}
+# Calculating probabilities
+test_prob <- predict(modB, newdata = test_df_transformed, type = "response")
+
+# Assigning class to probabilities where greater than or equal to 0.5 is 1 (true)
+test_pred_class <- ifelse(test_prob >= 0.5, 1, 0)
+
+# Mutating predicted class to test_df
+test_df_transformed$predicted_class <- test_pred_class
+
+print(test_pred_class)
+
+write.csv(test_df_transformed, file = "homework3_predictions.csv", row.names = FALSE)
+
+```
+
 
