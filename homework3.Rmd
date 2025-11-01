@@ -412,7 +412,7 @@ print(results)
 ### ROC comparsion
 Using ROC we are able to see that Model B had the best performance.
 
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE}
 predA<-predict(modA, newdata = train_df, type="response")
 predB<-predict(modB, newdata = train_df_transformed, type="response")
 predC<-predict(modC, newdata = train_df_transformed, type="response")
@@ -460,6 +460,7 @@ print(test_pred_class)
 write.csv(test_df_transformed, file = "homework3_predictions.csv", row.names = FALSE)
 
 ```
+
 
 
 
