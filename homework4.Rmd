@@ -27,6 +27,7 @@ library(corrplot)
 Explore, analyze and model a data set containing approximately 8000 records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A “1” means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.
 
 VARIABLE NAME DEFINITION THEORETICAL EFFECT
+
 - INDEX Identification Variable (do not use) None
 - TARGET_FLAG Was Car in a crash? 1=YES 0=NO None
 - TARGET_AMT If car was in a crash, what was the cost None
@@ -53,6 +54,8 @@ VARIABLE NAME DEFINITION THEORETICAL EFFECT
 - TRAVTIME Distance to Work Long drives to work usually suggest greater risk
 - URBANICITY Home/Work Area Unknown
 - YOJ Years on Job People who stay at a job for a long time are usually more safe
+
+## 2. DATA PREPARATION 
 
 ```{r import}
 train_df <- read.csv("insurance_training_data.csv")
@@ -97,6 +100,8 @@ train_df_imp <- complete(mice(train_df_imp, m = 1, method = "pmm", seed = 123))
 
 colSums(is.na(train_df_imp))
 ```
+
+### Distributions
 
 Now we can visualize the distributions for our target variables in the training set.
 
@@ -144,7 +149,7 @@ ggplot(long_df, aes(x = value)) +
   labs(title = "Distributions of Numeric Predictor Variables", y = "", x = "")
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # Box plots
 ggplot(long_df, aes(x = variable, y = value, fill = variable)) +
   geom_boxplot() +
@@ -153,7 +158,7 @@ ggplot(long_df, aes(x = variable, y = value, fill = variable)) +
   labs(title = "Distributions of Numeric Predictor Variables (Scaled)", y = "", x = "")
 ```
 
-
+And here is a correlation matrix for the numeric variables.
 
 ```{r}
 # Compute the correlation matrix
@@ -176,7 +181,6 @@ corrplot(
 ```
 
 
-## 2. DATA PREPARATION 
 
 Describe how you have transformed the data by changing the original variables or creating new variables. If you
 did transform the data or create new variables, discuss why you did this. Here are some possible transformations.
