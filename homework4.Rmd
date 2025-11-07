@@ -1,0 +1,212 @@
+---
+title: "Homework 4"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "Fall 2025"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(mice)
+library(corrplot)
+
+```
+
+**OBJECTIVE**: To build multiple linear regression and binary logistic regression models on the training data to predict the probability that: 
+- a person will crash their car 
+- the amount of money it will cost if the person does crash their car
+
+
+## 1. DATA EXPLORATION
+
+Explore, analyze and model a data set containing approximately 8000 records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A “1” means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.
+
+VARIABLE NAME DEFINITION THEORETICAL EFFECT
+- INDEX Identification Variable (do not use) None
+- TARGET_FLAG Was Car in a crash? 1=YES 0=NO None
+- TARGET_AMT If car was in a crash, what was the cost None
+- AGE Age of Driver Very young people tend to be risky. Maybe very old people also.
+- BLUEBOOK Value of Vehicle Unknown effect on probability of collision, but probably effect the payout if there is a crash
+- CAR_AGE Vehicle Age Unknown effect on probability of collision, but probably effect the payout if there is a crash
+- CAR_TYPE Type of Car Unknown effect on probability of collision, but probably effect the payout if there is a crash
+- CAR_USE Vehicle Use Commercial vehicles are driven more, so might increase probability of collision
+- CLM_FREQ # Claims (Past 5 Years) The more claims you filed in the past, the more you are likely to file in the future
+- EDUCATION Max Education Level Unknown effect, but in theory more educated people tend to drive more safely
+- HOMEKIDS # Children at Home Unknown effect
+- HOME_VAL Home Value In theory, home owners tend to drive more responsibly
+- INCOME Income In theory, rich people tend to get into fewer crashes
+- JOB Job Category In theory, white collar jobs tend to be safer
+- KIDSDRIV # Driving Children When teenagers drive your car, you are more likely to get into crashes
+- MSTATUS Marital Status In theory, married people drive more safely
+- MVR_PTS Motor Vehicle Record Points If you get lots of traffic tickets, you tend to get into more crashes
+- OLDCLAIM Total Claims (Past 5 Years) If your total payout over the past five years was high, this suggests future payouts will be high
+- PARENT1 Single Parent Unknown effect
+- RED_CAR A Red Car Urban legend says that red cars (especially red sports cars) are more risky. Is that true?
+- REVOKED License Revoked (Past 7 Years) If your license was revoked in the past 7 years, you probably are a more risky driver.
+- SEX Gender Urban legend says that women have less crashes then men. Is that true?
+- TIF Time in Force People who have been customers for a long time are usually more safe.
+- TRAVTIME Distance to Work Long drives to work usually suggest greater risk
+- URBANICITY Home/Work Area Unknown
+- YOJ Years on Job People who stay at a job for a long time are usually more safe
+
+```{r import}
+train_df <- read.csv("insurance_training_data.csv")
+test_df <- read.csv("insurance-evaluation-data.csv")
+```
+
+```{r clean}
+# Clean column values and convert to appropriate data types
+train_df <- train_df |>
+  mutate(across(
+    c(TARGET_FLAG, PARENT1, MSTATUS, SEX, EDUCATION, JOB, CAR_USE, CAR_TYPE, RED_CAR, REVOKED,  URBANICITY),
+    ~ as.factor(gsub("z_|<", "", .x))
+  )) |>
+  mutate(across(
+    c(INCOME, HOME_VAL, BLUEBOOK, OLDCLAIM),
+    ~ as.numeric(gsub("[\\$,]", "", .x))
+  ))
+
+test_df <- test_df |>
+  mutate(across(
+    c(TARGET_FLAG, PARENT1, MSTATUS, SEX, EDUCATION, JOB, CAR_USE, CAR_TYPE, RED_CAR, REVOKED,  URBANICITY),
+    ~ as.factor(gsub("z_|<", "", .x))
+  )) |>
+  mutate(across(
+    c(INCOME, HOME_VAL, BLUEBOOK, OLDCLAIM),
+    ~ as.numeric(gsub("[\\$,]", "", .x))
+  ))
+
+glimpse(train_df)
+glimpse(test_df)
+```
+
+Both datasets feature 26 variables; the training set contains 8161 observations and the testing set has 2141.
+
+There are 5 columns contain missing data. Since AGE is only missing in 6 rows, those observations can be dropped. For the rest of the variables, we can impute missing data using the MICE package.
+
+```{r}
+colSums(is.na(train_df))
+
+train_df_imp <- train_df |> drop_na(AGE)
+train_df_imp <- complete(mice(train_df_imp, m = 1, method = "pmm", seed = 123))
+
+colSums(is.na(train_df_imp))
+```
+
+Now we can visualize the distributions for our target variables in the training set.
+
+```{r}
+ggplot(train_df_imp, aes(x = TARGET_FLAG, fill = TARGET_FLAG)) +
+  geom_bar() +
+  labs(
+    title = "Distribution of Car Crash Involvement",
+    x = "Target (0 = NO, 1 = YES)",
+    y = "Count"
+  )
+```
+
+```{r}
+ggplot(train_df_imp, aes(x = TARGET_AMT)) +
+  geom_histogram(bins = 50) +
+  labs(title = "Distribution of Car Crash Costs", x = "Value", y = "Frequency")
+```
+
+```{r}
+ggplot(train_df_imp, aes(x = TARGET_AMT)) +
+  geom_histogram(bins = 75) +
+  scale_x_sqrt() +
+  scale_y_sqrt() +
+  labs(title = "Distribution of Car Crash Costs (Scaled)", x = "Value", y = "Frequency")
+```
+
+Distributions for some of the predictor variables can be seen below as well.
+
+```{r}
+# Select numeric columns
+num_vars <- train_df_imp |>
+  as_tibble() |>
+  dplyr::select(where(is.numeric)) |>
+  dplyr::select(-any_of(c("target", "INDEX")))
+
+# Reshape to long format
+long_df <- num_vars |>
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+# Histograms
+ggplot(long_df, aes(x = value)) +
+  geom_histogram(aes(y = ..density..), bins = 30) +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  labs(title = "Distributions of Numeric Predictor Variables", y = "", x = "")
+```
+
+```{r}
+# Box plots
+ggplot(long_df, aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distributions of Numeric Predictor Variables (Scaled)", y = "", x = "")
+```
+
+
+
+```{r}
+# Compute the correlation matrix
+corr_matrix <- cor(num_vars)
+corr_matrix[!is.finite(corr_matrix)] <- 0
+hclust(as.dist(1 - corr_matrix))
+
+# Plot correlation heatmap
+corrplot(
+  corr_matrix,
+  method = "color",
+  type = "upper", 
+  order = "hclust",
+  addCoef.col = "black", 
+  tl.col = "black", 
+  tl.srt = 45, 
+  number.cex = 0.6,
+  col = colorRampPalette(c("darkred", "white", "darkblue"))(200)
+)
+```
+
+
+## 2. DATA PREPARATION 
+
+Describe how you have transformed the data by changing the original variables or creating new variables. If you
+did transform the data or create new variables, discuss why you did this. Here are some possible transformations.
+a. b. c. d. e. Fix missing values (maybe with a Mean or Median value)
+Create flags to suggest if a variable was missing
+Transform data by putting it into buckets
+Mathematical transforms such as log or square root (or use Box-Cox)
+Combine variables (such as ratios or adding or multiplying) to create new variables
+
+
+## 3. BUILD MODELS
+Using the training data set, build at least two different multiple linear regression models and three different binary
+logistic regression models, using different variables (or the same variables with different transformations). You
+may select the variables manually, use an approach such as Forward or Stepwise, use a different approach such
+as trees, or use a combination of techniques. Describe the techniques you used. If you manually selected a
+variable for inclusion into the model or exclusion into the model, indicate why this was done.
+Discuss the coefficients in the models, do they make sense? For example, if a person has a lot of traffic tickets,
+you would reasonably expect that person to have more car crashes. If the coefficient is negative (suggesting that
+the person is a safer driver), then that needs to be discussed. Are you keeping the model even though it is counter
+intuitive? Why? The boss needs to know.
+
+
+## 4. SELECT MODELS 
+Decide on the criteria for selecting the best multiple linear regression model and the best binary logistic regression
+model. Will you select models with slightly worse performance if it makes more sense or is more parsimonious?
+Discuss why you selected your models.
+For the multiple linear regression model, will you use a metric such as Adjusted R2, RMSE, etc.? Be sure to
+explain how you can make inferences from the model, discuss multi-collinearity issues (if any), and discuss other
+relevant model output. Using the training data set, evaluate the multiple linear regression model based on (a)
+mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will you
+use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic
+regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f)
+F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.
