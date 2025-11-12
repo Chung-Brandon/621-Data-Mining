@@ -245,6 +245,19 @@ the person is a safer driver), then that needs to be discussed. Are you keeping 
 intuitive? Why? The boss needs to know.
 
 
+Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability.
+```{r}
+logist_model<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
+summary(logist_model)
+```
+
+Reduced logistic regression model.
+```{r}
+logist_model<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAIM_LOG+TRAVTIME_LOG+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
+summary(logist_model)
+```
+
+
 ## 4. SELECT MODELS 
 Decide on the criteria for selecting the best multiple linear regression model and the best binary logistic regression
 model. Will you select models with slightly worse performance if it makes more sense or is more parsimonious?
