@@ -14,7 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mice)
 library(corrplot)
-
+library(dplyr)
+library(e1071)
 ```
 
 **OBJECTIVE**: To build multiple linear regression and binary logistic regression models on the training data to predict the probability that: 
