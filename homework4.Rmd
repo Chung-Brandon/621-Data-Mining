@@ -257,6 +257,12 @@ logist_model<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAI
 summary(logist_model)
 ```
 
+Logistic model without transformed data.
+```{r}
+logist_model<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
+summary(logist_model)
+```
+
 
 ## 4. SELECT MODELS 
 Decide on the criteria for selecting the best multiple linear regression model and the best binary logistic regression
