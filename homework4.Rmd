@@ -16,6 +16,8 @@ library(mice)
 library(corrplot)
 library(dplyr)
 library(e1071)
+library(ggplot2)
+library(gridExtra)
 ```
 
 **OBJECTIVE**: To build multiple linear regression and binary logistic regression models on the training data to predict the probability that: 
@@ -206,6 +208,29 @@ for(v in Skewed_vars){
   train_df_imp[[new_name]]<-log(train_df_imp[[v]]+1)
 }
 ```
+
+Comparsion graph
+```{r}
+plot_list <- list()
+  
+for (v in Skewed_vars) {
+  new_v <- paste0(v, "_LOG")
+
+  p1 <- ggplot(train_df_imp, aes(x = .data[[v]])) +
+    geom_histogram(aes(y = after_stat(density)), fill = "lightblue", color = "black", bins = 30) +
+    ggtitle(paste0(v, " (Before Log)")) +
+    theme_minimal()
+  
+  p2 <- ggplot(train_df_imp, aes(x = .data[[new_v]])) +
+    geom_histogram(aes(y = after_stat(density)), fill = "lightgreen", color = "black", bins = 30) +
+    ggtitle(paste0(v, " (After Log)")) +
+    theme_minimal()
+  
+# Display graphs together
+  grid.arrange(p1, p2, ncol = 2)
+}
+```
+
 
 
 ## 3. BUILD MODELS
