@@ -59,8 +59,9 @@ VARIABLE NAME DEFINITION THEORETICAL EFFECT
 ## 2. DATA PREPARATION 
 
 ```{r import}
-train_df <- read.csv("insurance_training_data.csv")
-test_df <- read.csv("insurance-evaluation-data.csv")
+train_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/insurance_training_data.csv")
+
+test_df <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/insurance-evaluation-data.csv")
 ```
 
 ```{r clean}
