@@ -191,6 +191,21 @@ Mathematical transforms such as log or square root (or use Box-Cox)
 Combine variables (such as ratios or adding or multiplying) to create new variables
 
 
+Some numerical variables seemed to be skewed such as: "INCOME", "TRAVTIME", "OLDCLAIM", "HOME_VAL" and "BLUEBOOK" were skewed to the right. We did a log tranformation to make the variables have a more normally distributed data which is importan to have as algorithms assume that data is normally distributed. To ensure we tranforms the skewed numeric variables that are not count variables we used log transformation. For the transformation we just added new variables just in case we wanted to use the non-transformed variable for modeling.
+
+```{r}
+Skewed_vars<- c("INCOME", "HOME_VAL", "BLUEBOOK", "OLDCLAIM", "TRAVTIME")
+```
+
+```{r}
+#Applied log tranformation using log(x+1) to avoid log(0)
+for(v in Skewed_vars){
+  new_name<-paste0(v,"_LOG")
+  train_df_imp[[new_name]]<-log(train_df_imp[[v]]+1)
+}
+```
+
+
 ## 3. BUILD MODELS
 Using the training data set, build at least two different multiple linear regression models and three different binary
 logistic regression models, using different variables (or the same variables with different transformations). You
