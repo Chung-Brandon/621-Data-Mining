@@ -195,7 +195,7 @@ Mathematical transforms such as log or square root (or use Box-Cox)
 Combine variables (such as ratios or adding or multiplying) to create new variables
 
 
-Some numerical variables seemed to be skewed such as: "INCOME", "TRAVTIME", "OLDCLAIM", "HOME_VAL" and "BLUEBOOK" were skewed to the right. We did a log tranformation to make the variables have a more normally distributed data which is importan to have as algorithms assume that data is normally distributed. To ensure we tranforms the skewed numeric variables that are not count variables we used log transformation. For the transformation we just added new variables just in case we wanted to use the non-transformed variable for modeling.
+Some numerical variables seemed to be skewed such as: "INCOME", "TRAVTIME", "OLDCLAIM", "HOME_VAL" and "BLUEBOOK" were skewed to the right. Since right-skewed variables violate regression assumptions, we did a log tranformation to make the variables normally distributed. We transformed skewed numeric variables that were not count variables. For the transformation we just added new variables just in case we wanted to use the non-transformed variable for modeling. The transformation can help reduces sensitivity to outliers and help to stabilizes variance.
 
 ```{r}
 Skewed_vars<- c("INCOME", "HOME_VAL", "BLUEBOOK", "OLDCLAIM", "TRAVTIME")
@@ -245,22 +245,25 @@ the person is a safer driver), then that needs to be discussed. Are you keeping 
 intuitive? Why? The boss needs to know.
 
 
-Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability.
+The three logistic regression models built to predic Target flag (whether a person will crash their car), full logistic model with all predictors, reduced logistic model, and tranformed logistic model; these models are differne in complexity and nterpretability which will allow us to compare performace and coefficients.
+
+Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability. The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficent would mean a lower crash probability. OLDClaim_LOG and CLM_FREQ had positive variables as expected but MVR_PTS should have been positive as well, but it was skewed to the right and not transformed as it is a count variable.
+
 ```{r}
-logist_model<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
+logist_model1<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
 summary(logist_model)
 ```
 
-Reduced logistic regression model.
+Reduced logistic regression model with transformed variables.
 ```{r}
-logist_model<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAIM_LOG+TRAVTIME_LOG+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
-summary(logist_model)
+logist_model2<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAIM_LOG+TRAVTIME_LOG+CLM_FREQ+CAR_AGE+CAR_USE+CAR_TYPE, data=train_df_imp, family=binomial)
+summary(logist_model2)
 ```
 
 Logistic model without transformed data.
 ```{r}
-logist_model<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
-summary(logist_model)
+logist_model3<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
+summary(logist_model3)
 ```
 
 
