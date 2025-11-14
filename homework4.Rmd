@@ -260,7 +260,7 @@ Logistic model for Target flag using all variables, as target flag is a binary v
 
 ```{r}
 logist_model1<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
-summary(logist_model)
+summary(logist_model1)
 ```
 
 Reduced logistic regression model with transformed variables.
