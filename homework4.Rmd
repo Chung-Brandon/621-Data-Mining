@@ -262,17 +262,41 @@ Logistic model for Target flag using all variables, as target flag is a binary v
 logist_model1<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
 summary(logist_model1)
 ```
+```{r}
+test_probs <- predict(logist_model1, newdata = test_df, type = "response")
+test_class <- ifelse(test_probs > 0.5, 1, 0)
+
+head(test_class)
+head(test_probs)
+```
+
 
 Reduced logistic regression model with transformed variables.
 ```{r}
 logist_model2<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAIM_LOG+TRAVTIME_LOG+CLM_FREQ+CAR_AGE+CAR_USE+CAR_TYPE, data=train_df_imp, family=binomial)
 summary(logist_model2)
 ```
+```{r}
+test_probs2 <- predict(logist_model2, newdata = test_df, type = "response")
+test_class2 <- ifelse(test_probs2 > 0.5, 1, 0)
+
+head(test_class2)
+head(test_probs2)
+```
+
 
 Logistic model without transformed data.
 ```{r}
 logist_model3<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
 summary(logist_model3)
+```
+
+```{r}
+test_probs3 <- predict(logist_model3, newdata = test_df, type = "response")
+test_class3 <- ifelse(test_probs3 > 0.5, 1, 0)
+
+head(test_class3)
+head(test_probs3)
 ```
 
 
