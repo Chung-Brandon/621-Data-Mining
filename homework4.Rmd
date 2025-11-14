@@ -209,6 +209,15 @@ for(v in Skewed_vars){
 }
 ```
 
+```{r}
+#Also Applied transformation to test dataframe
+for(v in Skewed_vars){
+  new_name <- paste0(v, "_LOG")
+  test_df[[new_name]] <- log(test_df[[v]] + 1)
+}
+```
+
+
 Comparsion graph
 ```{r}
 plot_list <- list()
