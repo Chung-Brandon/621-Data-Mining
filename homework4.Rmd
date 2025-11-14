@@ -18,6 +18,7 @@ library(dplyr)
 library(e1071)
 library(ggplot2)
 library(gridExtra)
+library(caret)
 ```
 
 **OBJECTIVE**: To build multiple linear regression and binary logistic regression models on the training data to predict the probability that: 
