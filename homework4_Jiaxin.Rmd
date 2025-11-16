@@ -119,6 +119,23 @@ train_df_imp <- complete(mice(train_df_imp, m = 1, method = "pmm", seed = 123))
 colSums(is.na(train_df_imp))
 ```
 
+The testing data also had missing data used mice a well to impute missing data without imputing data to the target variables. The target variables were turned to empty strings to avoid mice from filling in those variables.
+```{r}
+# specify methods for each column
+methVar <- make.method(test_df)
+
+# set target columns to empty strings "" so mice will not touch them
+methVar[methVar != ""] <- "pmm"
+methVar["TARGET_FLAG"] <- ""
+methVar["TARGET_AMT"]  <- ""
+
+imp <- (mice(test_df, m = 1, method = methVar, seed = 123))
+test_df_imp <- complete(imp)
+
+test_df_imp$TARGET_AMT <- as.numeric(test_df$TARGET_AMT) #ensure the target variable is numeric
+
+colSums(is.na(train_df_imp))
+```
 
 ### Distributions
 
@@ -517,6 +534,51 @@ print(model_comparison)
 ```
 
 ### Predictions
+
+Predictions were made and saved to csv "Homework 4 Predictions". Logistic regression model 3 was used to predict car crash in variable TARGET_FLAG, and multiple linear regression model 2 was used to predict amount of claim for the car crash in variable TARGET_AMT. Multiple linear regression was only used on observations in the test data where our logistic regression predicts a car crash. Observations where there is not a predicted car crash defaults to a 0$ claim in TARGET_AMT. 
+
+```{r}
+# Generate predicted probabilities
+probs <- predict(logist_model3, newdata = test_df_imp, type = "response")
+
+# Convert to binary predictions using a threshold (e.g., 0.5)
+preds <- ifelse(probs > 0.5, 1, 0)
+
+# Add predictions to your test data frame
+test_df_imp$TARGET_FLAG <- preds
+
+```
+
+```{r}
+# Predict claim amount only for predicted claimants
+test_df_imp$TARGET_AMT <- ifelse(
+  test_df_imp$TARGET_FLAG == 1,
+  predict(linear_model2, newdata = test_df_imp),
+  0
+)
+
+```
+
+```{r}
+# Creating predictions df
+testdf_predictions <- test_df_imp
+```
+
+```{r}
+# Predicted Values for TARGET_FLAG and TARGET_AMT
+testdf_predictions$TARGET_FLAG
+```
+
+```{r}
+testdf_predictions$TARGET_AMT
+```
+```{r}
+# writing predictions to csv
+
+write.csv(testdf_predictions, "Homework 4 Predictions")
+```
+
+
 
 
 
