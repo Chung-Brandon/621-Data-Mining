@@ -106,6 +106,24 @@ train_df_imp <- complete(mice(train_df_imp, m = 1, method = "pmm", seed = 123))
 colSums(is.na(train_df_imp))
 ```
 
+The testing data also had missing data used mice a well to impute missing data without imputing data to the target variables. The target variables were turned to empty strings to avoid mice from filling in those variables.
+```{r}
+# specify methods for each column
+methVar <- make.method(test_df)
+
+# set target columns to empty strings "" so mice will not touch them
+methVar[methVar != ""] <- "pmm"
+methVar["TARGET_FLAG"] <- ""
+methVar["TARGET_AMT"]  <- ""
+
+imp <- (mice(test_df, m = 1, method = methVar, seed = 123))
+test_df_imp <- complete(imp)
+
+colSums(is.na(train_df_imp))
+```
+
+
+
 ### Distributions
 
 Now we can visualize the distributions for our target variables in the training set.
