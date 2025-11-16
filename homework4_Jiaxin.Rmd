@@ -372,12 +372,7 @@ logist_model4 <- step(logist_model3, direction = "backward")
 formula(logist_model4)
 ```
 
-### Logistic Model 5: Based on the entire dataset from the cleaned and imputed training dataset
-```{r}
-logist_model5 <- glm(TARGET_FLAG~., family=binomial, data = train_df_imp_log)
 
-summary(logist_model5)
-```
 ### Linear Model 1: All Predictors Without Transformed
 
 ```{r}
@@ -439,6 +434,8 @@ F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluati
 
 ### Assessing Logistic Models
 
+Our logistic regression model 1
+
 ```{r}
 compare_logistic_models <- function(models, data, response_var, threshold = 0.5) {
 
@@ -485,8 +482,7 @@ models <- list(
   Full_Log = logist_model3,
   Full_NoLog = logist_model1,
   Reduced_Log = logist_model4,
-  Reduced_NoLog = logist_model2,
-  Full_df_LM     = logist_model5
+  Reduced_NoLog = logist_model2
 )
 
 
@@ -497,10 +493,31 @@ compare_logistic_models(models, train_df_imp_log, response_var = "TARGET_FLAG")
 
 ### Assessing Linear Models
 
-```{r}
+Our linear model 2, the reduced model without transformed data performed the best with AIC and only very slightly worse on Rsquared. 
 
+```{r}
+model_comparison <- data.frame(
+  Model = c("linear_model1", "linear_model2", "linear_model3", "linear_model4"),
+  AIC = c(
+    AIC(linear_model1),
+    AIC(linear_model2),
+    AIC(linear_model3),
+    AIC(linear_model4)
+  ),
+  Adjusted_R2 = c(
+    summary(linear_model1)$adj.r.squared,
+    summary(linear_model2)$adj.r.squared,
+    summary(linear_model3)$adj.r.squared,
+    summary(linear_model4)$adj.r.squared
+  )
+)
+
+print(model_comparison)
 
 ```
+
+### Predictions
+
 
 
 
