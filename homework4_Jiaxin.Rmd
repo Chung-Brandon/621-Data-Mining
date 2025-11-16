@@ -378,6 +378,50 @@ logist_model5 <- glm(TARGET_FLAG~., family=binomial, data = train_df_imp_log)
 
 summary(logist_model5)
 ```
+### Linear Model 1: All Predictors Without Transformed
+
+```{r}
+# Removing TARGET_FLAG from training and testing data for linear modeling of TARGET_AMT
+
+train_df_imp_lin <- subset(train_df_imp, select = -TARGET_FLAG)
+test_df_lin <- subset(test_df, select = -TARGET_FLAG)
+```
+
+```{r}
+linear_model1 <- lm(TARGET_AMT ~ .- INCOME_LOG - HOME_VAL_LOG - BLUEBOOK_LOG - OLDCLAIM_LOG - TRAVTIME_LOG, data = train_df_imp_lin)
+
+summary(linear_model1)
+
+```
+
+### Linear Model 2: Reduced Predictors Without Transformed
+
+```{r}
+linear_model2<- step(linear_model1, direction = "backward")
+summary(linear_model2)
+```
+```{r}
+formula(linear_model2)
+```
+
+### Linear Model 3: All Predictors With Transformed
+
+```{r}
+linear_model3 <- lm(TARGET_AMT ~ .- INCOME - HOME_VAL - BLUEBOOK - OLDCLAIM - TRAVTIME, data = train_df_imp_lin)
+
+summary(linear_model3)
+```
+
+### Linear Model 4: Reduced Predictors With Transformed
+
+```{r}
+linear_model4 <- step(linear_model3, direction = "backward")
+summary(linear_model4)
+```
+
+```{r}
+formula(linear_model4)
+```
 
 
 ## 4. SELECT MODELS 
@@ -451,6 +495,12 @@ compare_logistic_models(models, train_df_imp_log, response_var = "TARGET_FLAG")
 
 ```
 
+### Assessing Linear Models
+
+```{r}
+
+
+```
 
 
 
