@@ -3,10 +3,12 @@ title: "Homework 4"
 author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
 date: "Fall 2025"
 output:
-  pdf_document: default
+  pdf_document:
+    latex_engine: xelatex
   html_document:
     df_print: paged
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -21,7 +23,7 @@ library(gridExtra)
 library(caret)
 library(pROC)
 library(kableExtra)
-
+library(tinytex)
 ```
 
 **OBJECTIVE**: To build multiple linear regression and binary logistic regression models on the training data to predict the probability that: 
@@ -324,9 +326,9 @@ the person is a safer driver), then that needs to be discussed. Are you keeping 
 intuitive? Why? The boss needs to know.
 
 
-The three logistic regression models built to predict Target flag (whether a person will crash their car), full logistic model with all predictors, reduced logistic model, and tranformed logistic model; these models are differnt in complexity and interpretability which will allow us to compare performace and coefficients.
+The three logistic regression models built to predict Target flag (whether a person will crash their car), full logistic model with all predictors, reduced logistic model, and transformed logistic model; these models are different in complexity and interpretability which will allow us to compare performance and coefficients.
 
-Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability. The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficent would mean a lower crash probability. OLDClaim_LOG and CLM_FREQ had positive variables as expected but MVR_PTS should have been positive as well, but it was skewed to the right and not transformed as it is a count variable.
+Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability. The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficient would mean a lower crash probability. OLDClaim LOG and CLM FREQ had positive variables as expected but MVR_PTS should have been positive as well, but it was skewed to the right and not transformed as it is a count variable.
 
 
 ```{r}
@@ -345,7 +347,7 @@ test_df_log <- subset(test_df, select = -TARGET_AMT)
 
 ### Logistic Model 1: All Predictors Without Transformed
 
-
+To compare whether transformations materially improve interpretability or predictive accuracy. Log transformations were applied to reduce skewness (like OLDCLAIM, HOME VAL, BLUEBOOK), improving coefficient stability. CAR USE and CAR TYPE were included because exploratory analysis indicated differences in crash likelihood across usage categories and vehicle types. Based on these coeficient CLM_FREQ positively associated with crash probability and AGE, HOMEVAL, and BLUEBOOK negatively associated, suggesting older, wealthier drivers are safer. Also, the car type show the bigger the vechile the higher the probability the person will crash.
 ```{r}
 logist_model1 <- glm(
   TARGET_FLAG ~ . - INCOME_LOG - HOME_VAL_LOG - BLUEBOOK_LOG - OLDCLAIM_LOG - TRAVTIME_LOG,
@@ -356,8 +358,21 @@ logist_model1 <- glm(
 summary(logist_model1)
 ```
 
+```{r}
+pred_probs <- predict(logist_model1, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
+```
+
 
 ### Logistic Model 2: Reduced Predictors without Transformed
+To compare the outcomes with the reduced transformed.
 
 ```{r}
 logist_model2 <- step(logist_model1, direction = "backward")
@@ -367,7 +382,23 @@ logist_model2 <- step(logist_model1, direction = "backward")
 formula(logist_model2)
 ```
 
+```{r}
+pred_probs <- predict(logist_model2, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
+```
+
+
+
 ### Logistic Model 3: All Predictors with Transformations
+The baseline- logistic model uses all variables except Target amt, as it is defined for claimana and should be used to predict the likelihood someone would crash. This model could be used for predicting crash probability.
+The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficent would mean a lower crash probability. MVR_PTS and CLM_FREQ had positive variables as expected.
 
 ```{r}
 logist_model3 <- glm(
@@ -379,7 +410,26 @@ logist_model3 <- glm(
 summary(logist_model3)
 ```
 
+```{r}
+pred_probs <- predict(logist_model3, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
+```
+
+
 ### Logistic Model 4: Reduced Predictors with Transformations
+Reduced logistic regression model with transformed variables. This model includes only a subset of variables chosen based on statistical significance and predictive relevance from Model 1. Many continuous predictors are log-transformed to reduce skewness and linearize relationships.
+
+In the model, OLDCLAIM LOG is positively and highly significantly associated with the probability of a crash, indicating that larger prior claims increase risk. CLM FREQ shows a small positive association, but it is not statistically significant, so its effect is uncertain.
+Demographic and financial factors such as AGE, HOME VAL LOG, and BLUEBOOK LOG are negatively associated with crash probability, suggesting that older and wealthier drivers tend to be safer.
+Regarding vehicle type, most larger vehicles—such as SUVs, pickups, vans, and panel trucks—are associated with higher crash probability compared to the reference category. Sports cars also have the highest positive coefficient, likely reflecting riskier driving behavior rather than vehicle size alone.
+Overall, the model indicates that prior claims, driver age, wealth, vehicle use, and type are important predictors of crash likelihood.
 
 ```{r}
 logist_model4 <- step(logist_model3, direction = "backward")
@@ -387,10 +437,25 @@ logist_model4 <- step(logist_model3, direction = "backward")
 
 ```{r}
 formula(logist_model4)
+summary(logist_model4)
+```
+
+
+```{r}
+pred_probs <- predict(logist_model4, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
 ```
 
 
 ### Linear Model 1: All Predictors Without Transformed
+To make predictions on claim amount, this model would be the baseline.
 
 ```{r}
 # Removing TARGET_FLAG from training and testing data for linear modeling of TARGET_AMT
@@ -417,6 +482,7 @@ formula(linear_model2)
 ```
 
 ### Linear Model 3: All Predictors With Transformed
+For comparsion with models that have non tranformed variables
 
 ```{r}
 linear_model3 <- lm(TARGET_AMT ~ .- INCOME - HOME_VAL - BLUEBOOK - OLDCLAIM - TRAVTIME, data = train_df_imp_lin)
@@ -451,7 +517,7 @@ F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluati
 
 ### Assessing Logistic Models
 
-Our logistic regression model 1
+Our logistic regression model 1 the model with all variables (except target amt) with log transformation. This model was the best choice, as the accuracy difference amog the other models were minimal, it had the highest accuracy, the highest sensitivity, meaning it was slightly better at correctly identifying positive cases. This is important in situations where detecting positive is more critical than minimizing false positives. Although its AIC (7345.540) is slightly higher than some reduced models, the trade-off in favor of sensitivity justifies choosing Full Log in this context. Therefore, Full Log provides a good balance between performance and the practical goal of maximizing true positive detection.
 
 ```{r}
 compare_logistic_models <- function(models, data, response_var, threshold = 0.5) {
@@ -549,6 +615,19 @@ test_df_imp$TARGET_FLAG <- preds
 
 ```
 
+
+```{r}
+pred_probs <- predict(logist_model3, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
+```
+
 ```{r}
 # Predict claim amount only for predicted claimants
 test_df_imp$TARGET_AMT <- ifelse(
@@ -577,7 +656,6 @@ testdf_predictions$TARGET_AMT
 
 write.csv(testdf_predictions, "Homework 4 Predictions")
 ```
-
 
 
 
