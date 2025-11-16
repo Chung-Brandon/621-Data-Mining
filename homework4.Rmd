@@ -119,6 +119,8 @@ methVar["TARGET_AMT"]  <- ""
 imp <- (mice(test_df, m = 1, method = methVar, seed = 123))
 test_df_imp <- complete(imp)
 
+test_df_imp$TARGET_AMT <- as.numeric(test_df$TARGET_AMT) #ensure the target variable is numeric
+
 colSums(is.na(train_df_imp))
 ```
 
@@ -232,7 +234,7 @@ for(v in Skewed_vars){
 #Also Applied transformation to test dataframe
 for(v in Skewed_vars){
   new_name <- paste0(v, "_LOG")
-  test_df[[new_name]] <- log(test_df[[v]] + 1)
+  test_df_imp[[new_name]] <- log(test_df_imp[[v]] + 1)
 }
 ```
 
@@ -273,16 +275,31 @@ the person is a safer driver), then that needs to be discussed. Are you keeping 
 intuitive? Why? The boss needs to know.
 
 
-The three logistic regression models built to predic Target flag (whether a person will crash their car), full logistic model with all predictors, reduced logistic model, and tranformed logistic model; these models are differne in complexity and nterpretability which will allow us to compare performace and coefficients.
+Since Logistic Target flag variable is binary 3 logistic models were used to predict target flag.
+ 
+The first model logistic model uses all variables except Target amt, as it is defined for claimana and should be used to predict the likelihood someone would crash. This model could be used for predicting crash probability.
+The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficent would mean a lower crash probability. OLDClaim_LOG, MVR_PTS and CLM_FREQ had positive variables as expected.
 
-Logistic model for Target flag using all variables, as target flag is a binary variable. This model could be used for predicting crash probability. The coefficient show change in crash probability with each predictor, a positive coefficients means a higher crash probability and a negative coefficent would mean a lower crash probability. OLDClaim_LOG and CLM_FREQ had positive variables as expected but MVR_PTS should have been positive as well, but it was skewed to the right and not transformed as it is a count variable.
 
 ```{r}
-logist_model1<-glm(TARGET_FLAG ~., data=train_df_imp, family=binomial)
+logist_model1<-glm(TARGET_FLAG ~.-TARGET_AMT, data=train_df_imp, family=binomial)
 summary(logist_model1)
 ```
+
 ```{r}
-test_probs <- predict(logist_model1, newdata = test_df, type = "response")
+pred_probs <- predict(logist_model1, train_df_imp, type = "response")
+pred_class <- ifelse(pred_probs > 0.5, 1, 0)
+
+# Confusion matrix on training data
+confusionMatrix(
+  factor(pred_class),
+  factor(train_df_imp$TARGET_FLAG),
+  positive = "1"
+)
+```
+
+```{r}
+test_probs <- predict(logist_model1, newdata = test_df_imp, type = "response")
 test_class <- ifelse(test_probs > 0.5, 1, 0)
 
 head(test_class)
@@ -290,13 +307,20 @@ head(test_probs)
 ```
 
 
-Reduced logistic regression model with transformed variables.
+Reduced logistic regression model with transformed variables. This model includes only a subset of variables chosen based on statistical significance and predictive relevance from Model 1. Many continuous predictors are log-transformed to reduce skewness and linearize relationships.
+
+In the model, OLDCLAIM LOG is positively and highly significantly associated with the probability of a crash, indicating that larger prior claims increase risk. CLM FREQ shows a small positive association, but it is not statistically significant, so its effect is uncertain.
+Demographic and financial factors such as AGE, HOME VAL LOG, and BLUEBOOK LOG are negatively associated with crash probability, suggesting that older and wealthier drivers tend to be safer.
+Regarding vehicle type, most larger vehicles—such as SUVs, pickups, vans, and panel trucks—are associated with higher crash probability compared to the reference category. Sports cars also have the highest positive coefficient, likely reflecting riskier driving behavior rather than vehicle size alone.
+Overall, the model indicates that prior claims, driver age, wealth, vehicle use, and type are important predictors of crash likelihood.
+
 ```{r}
 logist_model2<-glm(TARGET_FLAG ~ AGE+BLUEBOOK_LOG+INCOME_LOG+HOME_VAL_LOG+OLDCLAIM_LOG+TRAVTIME_LOG+CLM_FREQ+CAR_AGE+CAR_USE+CAR_TYPE, data=train_df_imp, family=binomial)
 summary(logist_model2)
 ```
+
 ```{r}
-test_probs2 <- predict(logist_model2, newdata = test_df, type = "response")
+test_probs2 <- predict(logist_model2, newdata = test_df_imp, type = "response")
 test_class2 <- ifelse(test_probs2 > 0.5, 1, 0)
 
 head(test_class2)
@@ -304,19 +328,21 @@ head(test_probs2)
 ```
 
 
-Logistic model without transformed data.
+Logistic model without transformed data. This model uses the same core predictors as Model 2 but without log transformations, to compare whether transformations materially improve interpretability or predictive accuracy. Log transformations were applied to reduce skewness (like OLDCLAIM, HOME VAL, BLUEBOOK), improving coefficient stability. CAR USE and CAR TYPE were included because exploratory analysis indicated differences in crash likelihood across usage categories and vehicle types. Based on these coeeficient OLDCLAIM and CLM_FREQ positively associated with crash probability and AGE, HOMEVAL, and BLUEBOOK negatively associated, suggesting older, wealthier drivers are safer. Also, the car type show the bigger the vechile the higher the probability the person will crash.
 ```{r}
-logist_model3<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE, data=train_df_imp, family=binomial)
+logist_model3<-glm(TARGET_FLAG ~ AGE+BLUEBOOK+INCOME+HOME_VAL+OLDCLAIM+TRAVTIME+CLM_FREQ+CAR_AGE+CAR_TYPE, data=train_df_imp, family=binomial)
 summary(logist_model3)
 ```
 
 ```{r}
-test_probs3 <- predict(logist_model3, newdata = test_df, type = "response")
+test_probs3 <- predict(logist_model3, newdata = test_df_imp, type = "response")
 test_class3 <- ifelse(test_probs3 > 0.5, 1, 0)
 
 head(test_class3)
 head(test_probs3)
 ```
+
+
 
 
 ## 4. SELECT MODELS 
@@ -330,3 +356,7 @@ mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the bin
 use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic
 regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f)
 F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.
+
+
+
+
