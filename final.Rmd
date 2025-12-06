@@ -1,0 +1,55 @@
+---
+title: "Final Project: Breast Cancer Classification"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "Fall 2025"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(caret)
+```
+
+Import
+
+```{r}
+df <- read.csv("breast-cancer.csv")
+```
+
+Convert y variable to factor
+
+```{r}
+df <- df |>
+  mutate(diagnosis = as.factor(diagnosis))
+```
+
+Partition
+
+```{r}
+set.seed(123)
+
+train_index <- createDataPartition(df$diagnosis, p = 0.7, list = FALSE)
+
+train <- df[train_index, ]
+test <- df[-train_index, ]
+```
+
+Data Exploration
+
+```{r}
+colSums(is.na(df))
+```
+
+```{r}
+ggplot(train, aes(x = diagnosis)) +
+  geom_bar()
+```
+
+
+
