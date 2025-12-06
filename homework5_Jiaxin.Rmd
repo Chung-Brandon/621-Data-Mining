@@ -1,0 +1,172 @@
+---
+title: "Homework 5"
+author: "Brandon Chung, Jiaxin Zheng, Andreina Arias, and Stephanie Chiang"
+date: "Fall 2025"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+## Overview
+
+In this homework assignment, you will explore, analyze and model a data set containing information on
+approximately 12,000 commercially available wines. The variables are mostly related to the chemical properties of the wine being sold. The response variable is the number of sample cases of wine that were purchased by wine
+distribution companies after sampling a wine. These cases would be used to provide tasting samples to
+restaurants and wine stores around the United States. The more sample cases purchased, the more likely is a
+wine to be sold at a high end restaurant. A large wine manufacturer is studying the data in order to predict the
+number of wine cases ordered based upon the wine characteristics. If the wine manufacturer can predict the
+number of cases, then that manufacturer will be able to adjust their wine offering to maximize sales.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(mice)
+library(corrplot)
+library(dplyr)
+library(e1071)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+library(pROC)
+library(kableExtra)
+library(tinytex)
+library(tidyr)
+```
+
+
+## 1. DATA EXPLORATION
+
+Explore, analyze and model a data set containing approximately 8000 records representing a customer at an auto insurance company. Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A “1” means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.
+
+VARIABLE NAME DEFINITION THEORETICAL EFFECT
+
+- INDEX: Identification Variable (do not use) None
+- TARGET: Number of Cases Purchased None
+- AcidIndex: Proprietary method of testing total acidity of wine by using a weighted average
+- Alcohol: Alcohol Content
+- Chlorides: Chloride content of wine
+- CitricAcid: Citric Acid Content
+- Density: Density of Wine
+- FixedAcidity: Fixed Acidity of Wine
+- FreeSulfurDioxide: Sulfur Dioxide content of wine
+- LabelAppeal: Marketing Score indicating the appeal of label design for consumers. High numbers
+suggest customers like the label design. Negative numbers suggest customes
+don't like the design. (Many consumers purchase based on the visual appeal of the
+wine label design. Higher numbers suggest better sales.)
+- ResidualSugar: Residual Sugar of wine
+- STARS: Wine rating by a team of experts. 4 Stars = Excellent, 1 Star = Poor (A high number of stars suggests high sales)
+- Sulphates: Sulfate conten of wine
+- TotalSulfurDioxide: Total Sulfur Dioxide of Wine
+- VolatileAcidity: Volatile Acid content of wine
+- pH: pH of wine
+
+#### Dataset
+
+The dataset contains 16 columns and 12,795 rows. An initial review shows a number of missing values, with 8 columns containing NAs. We also observe that several numerical features include negative values.
+
+```{r import}
+train<- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/wine-training-data.csv")
+
+test <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/wine-evaluation-data.csv")
+```
+
+```{r}
+glimpse(train)
+```
+
+```{r}
+summary(train)
+```
+```{r}
+colSums(is.na(train))
+```
+
+```{r echo=FALSE}
+# Drop the INDEX column
+train <- train %>% 
+  dplyr::select(-INDEX)
+
+test <- test %>% 
+  dplyr::select(-IN)
+```
+
+#### Distributions
+
+- We see that most variables have normal distribution, like Alcohol, FixedAcidity, Density, pH, Sulphates, VolatileAcidity have strong central peaks. 
+
+- FreeSulfurDioxide and TotalSulfurDioxide extend from negative to positive values. This indicates data quality issues or special cases that may require transformation.
+
+- Variable AcidIndex, STARS, and LabelAppeal shows a multimodal distribution.
+
+```{r}
+train_long <- train %>% 
+  pivot_longer(
+    cols = everything(),
+    names_to  = "variable",
+    values_to = "value"
+  )
+
+ggplot(train_long, aes(x = value)) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 30,
+                 fill = "grey40") +
+  geom_density(color = "blue", linewidth = 0.7, na.rm = TRUE) +
+  facet_wrap(~ variable, scales = "free", ncol = 4) +
+  labs(x = NULL, y = "density", title = "Distributions of Wine Variables") +
+  theme_minimal()
+
+```
+
+
+
+#### Boxplots
+
+- Several variables have extreme outliers. 
+- ResidualSugar, TotalSulfurDioxide, FreeSulfurDioxide have very large positive and negative outliers.
+
+```{r}
+# Boxplots
+ggplot(train_long, aes(x = variable, y = value)) +
+  geom_boxplot(outlier.color = "red", outlier.size = 0.8, na.rm = TRUE) +
+  facet_wrap(~ variable, scales = "free", ncol = 4) +
+  labs(
+    title = "Boxplots of Wine Variables"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    strip.text = element_text(size = 10, face = "bold")
+  )
+```
+
+## 2. DATA Preparation
+
+#### Missing Values
+We use mice package to impute the missing values in the dataset.
+
+```{r}
+# Impute missing data using mice
+
+set.seed(123)
+imp <- mice(train, m = 5, method = "pmm")
+train_mice <- complete(imp)
+
+```
+```{r}
+colSums(is.na(train_mice))
+```
+
+#### Outliers
+
+Many numerical features have somewhat unreasonable negative values, so we decided to use log-transformed variables. 
+
+#### Data Transformations
+Use log- transform 
+```{r}
+
+```
+
