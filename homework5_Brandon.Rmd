@@ -40,6 +40,7 @@ library(pROC)
 library(kableExtra)
 library(tinytex)
 library(tidyr)
+library(patchwork)
 
 ```
 
@@ -234,6 +235,23 @@ test_imp <- complete(imp)
 colSums(is.na(test_imp))
 ```
 
+Density plot to recheck distribution of numeric variables.
+```{r}
+# Select numeric variables only (density requires numeric)
+num_vars <- names(train_mice)[sapply(train_mice, is.numeric)]
+
+plot_list <- lapply(num_vars, function(var) {
+  ggplot(train_mice, aes(x = .data[[var]])) +
+    geom_histogram(aes(y = ..density..),
+                   bins = 30,
+                   fill = "grey40") +
+    geom_density(color = "blue", linewidth = 0.7, na.rm = TRUE) +
+    labs(title = var, x = NULL, y = "density") +
+    theme_minimal()
+})
+
+wrap_plots(plot_list, ncol = 4)
+```
 
 
 #### Outliers
@@ -246,3 +264,4 @@ Use log- transform
 
 
 ```
+
