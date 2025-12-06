@@ -404,6 +404,15 @@ kable(model_metrics, caption = "Comparison of Regression Models with RMSE, MAE, 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
 ```
 
+Based on the model comparison metrics, the linear regression model with all variables performed the best. This model achieved the lowest RMSE, MAE, and AIC, and the highest R-squared compared to the other models which were the Poisson and reduced-variable models. The linear regression may have done the best because the target variable may have had approximately linear relationships with the predictor variables causing the linear regression to capture the patterns. The full linear regression model balances simplicity and explanatory power, capturing most of the variability in wine cases purchased, which explains why it outperformed the other models in all metrics.
+
+```{r}
+test_imp$TARGET<-round(pmax(test_pred3))
+```
+
+```{r}
+write.csv(test_imp, "Wine_Prediction.csv", row.names = FALSE)
+```
 
 
 
