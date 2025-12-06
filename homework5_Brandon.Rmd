@@ -318,6 +318,18 @@ Model_M2<- lm(TARGET ~ .-FixedAcidity -VolatileAcidity -CitricAcid -ResidualSuga
 summary(Model_M2)
 ```
 
+Negative Binomial Model with all variables
+```{r}
+Model_N<-glm.nb(TARGET~.,data=train_mice)
+summary(Model_N)
+```
+
+Negative Binomial Model with only chemical variables
+```{r}
+Model_N2<-glm.nb(TARGET~.-FixedAcidity -VolatileAcidity -CitricAcid -ResidualSugar -Chlorides -FreeSulfurDioxide -TotalSulfurDioxide -Sulphates -Alcohol,data=train_mice)
+summary(Model_N)
+```
+
 ### Predictions
 
 ```{r}
@@ -348,6 +360,17 @@ train_pred4 <- predict(Model_M2, newdata = train_mice)
 test_pred4 <- predict(Model_M2, newdata = test_imp)
 ```
 
+```{r}
+train_pred5 <- predict(Model_N, newdata = train_mice)
+
+test_pred5 <- round(pmax(predict(Model_N, newdata = test_imp),0))
+```
+
+```{r}
+train_pred6 <- predict(Model_N2, newdata = train_mice)
+
+test_pred6 <- round(pmax(predict(Model_N2, newdata = test_imp),0))
+```
 ## Comparsion of Models
 ```{r}
 # RMSE & MAE
@@ -362,6 +385,13 @@ mae_m3  <- mae(train_mice$TARGET, train_pred3)
 
 rmse_m4 <- rmse(train_mice$TARGET, train_pred4)
 mae_m4  <- mae(train_mice$TARGET, train_pred4)
+
+rmse_m5 <- rmse(train_mice$TARGET, train_pred5)
+mae_m5  <- mae(train_mice$TARGET, train_pred5)
+
+rmse_m6 <- rmse(train_mice$TARGET, train_pred6)
+mae_m6  <- mae(train_mice$TARGET, train_pred6)
+
 ```
 
 ```{r}
@@ -370,6 +400,8 @@ aic_p1 <- AIC(Model_p1)
 aic_p2 <- AIC(Model_p2)
 aic_m3 <- AIC(Model_M)
 aic_m4 <- AIC(Model_M2)
+aic_m5 <- AIC(Model_N)
+aic_m6 <- AIC(Model_N2)
 ```
 
 
@@ -383,6 +415,10 @@ rsq_m4 <- summary(Model_M2)$r.squared
 rsq_p1 <- 1 - (Model_p1$deviance / Model_p1$null.deviance)
 rsq_p2 <- 1 - (Model_p2$deviance / Model_p2$null.deviance)
 
+#Negative Binomial
+rsq_m5 <- 1 - (Model_N$deviance / Model_N$null.deviance)
+rsq_m6 <- 1 - (Model_N2$deviance / Model_N2$null.deviance)
+
 ```
 
 
@@ -390,13 +426,15 @@ rsq_p2 <- 1 - (Model_p2$deviance / Model_p2$null.deviance)
 ```{r}
 model_metrics <- data.frame(
   Model = c("Poisson Regression",
-            "Poisson Regression model 2",
+            "Poisson Regression Model 2",
             "Linear Regression",
-            "Linear Regression Model 2"),
-  RMSE  = c(rmse_p1, rmse_p2, rmse_m3, rmse_m4),
-  MAE   = c(mae_p1, mae_p2, mae_m3, mae_m4),
-  AIC   = c(aic_p1, aic_p2, aic_m3, aic_m4),
-  R_squared = c(rsq_p1, rsq_p2, rsq_m3, rsq_m4)
+            "Linear Regression Model 2",
+            "Negative Binomial",
+            "Negative Binomial Model 2"),
+  RMSE  = c(rmse_p1, rmse_p2, rmse_m3, rmse_m4,rmse_m5,rmse_m6 ),
+  MAE   = c(mae_p1, mae_p2, mae_m3, mae_m4,mae_m5, mae_m6),
+  AIC   = c(aic_p1, aic_p2, aic_m3, aic_m4, aic_m5, aic_m6),
+  R_squared = c(rsq_p1, rsq_p2, rsq_m3, rsq_m4, rsq_m5, rsq_m6)
 )
 
 
@@ -404,7 +442,7 @@ kable(model_metrics, caption = "Comparison of Regression Models with RMSE, MAE, 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
 ```
 
-Based on the model comparison metrics, the linear regression model with all variables performed the best. This model achieved the lowest RMSE, MAE, and AIC, and the highest R-squared compared to the other models which were the Poisson and reduced-variable models. The linear regression may have done the best because the target variable may have had approximately linear relationships with the predictor variables causing the linear regression to capture the patterns. The full linear regression model balances simplicity and explanatory power, capturing most of the variability in wine cases purchased, which explains why it outperformed the other models in all metrics.
+Based on the model comparison metrics, the linear regression model with all variables performed the best. This model achieved the lowest RMSE, MAE, and AIC, and the highest R-squared compared to the other models which were the Poisson, negative binomial and reduced-variable models. The linear regression may have done the best because the target variable may have had approximately linear relationships with the predictor variables causing the linear regression to capture the patterns. The full linear regression model balances simplicity and explanatory power, capturing most of the variability in wine cases purchased, which explains why it outperformed the other models in all metrics.
 
 ```{r}
 test_imp$TARGET<-round(pmax(test_pred3))
@@ -413,6 +451,4 @@ test_imp$TARGET<-round(pmax(test_pred3))
 ```{r}
 write.csv(test_imp, "Wine_Prediction.csv", row.names = FALSE)
 ```
-
-
 
