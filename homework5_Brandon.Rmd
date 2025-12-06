@@ -294,19 +294,29 @@ Poisson Regression Model 1- baseline with all variables.
 Model_p1<-glm(TARGET~., data=train_mice, family=poisson)
 summary(Model_p1)
 ```
+Poisson Regression Model 2- with chemical variables.
+```{r}
+set.seed(123)
+
+Model_p2<- glm(TARGET ~ .-FixedAcidity -VolatileAcidity -CitricAcid -ResidualSugar -Chlorides -FreeSulfurDioxide -TotalSulfurDioxide -Sulphates -Alcohol, data = train_mice, family=poisson)
+summary(Model_p2)
+```
+
 Multiple linear regression Model- baseline with all variables
 ```{r}
 Model_M<-lm(TARGET~.,data = train_mice)
 summary(Model_M)
 ```
 
-Multinomial logistic regression with all variables
+Multiple Linear regression with chemical variables
+
 ```{r}
 set.seed(123)
 
-Model_ML <- multinom(TARGET ~ ., data = train_mice)
-summary(Model_ML)
+Model_M2<- lm(TARGET ~ .-FixedAcidity -VolatileAcidity -CitricAcid -ResidualSugar -Chlorides -FreeSulfurDioxide -TotalSulfurDioxide -Sulphates -Alcohol, data = train_mice)
+summary(Model_M2)
 ```
+
 
 
 
