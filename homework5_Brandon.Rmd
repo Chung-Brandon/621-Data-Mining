@@ -207,6 +207,35 @@ train_mice <- complete(imp)
 colSums(is.na(train_mice))
 ```
 
+Corrections were also applied to the test data
+```{r}
+
+test <- test %>%
+  mutate(STARS = ifelse(is.na(STARS), "unranked", STARS),
+         STARS = as.factor(STARS))
+
+test <- test %>%
+  mutate(LabelAppeal = as.factor(LabelAppeal))
+```
+
+The testing data also had missing data used mice a well to impute missing data without imputing data to the target variables. The target variables were turned to empty strings to avoid mice from filling in those variables.
+```{r}
+# specify methods for each column
+methVar <- make.method(test)
+
+# set target columns to empty strings "" so mice will not touch them
+methVar[methVar != ""] <- "pmm"
+methVar["TARGET"] <- ""
+
+imp <- (mice(test, m = 5, method = methVar, seed = 123))
+test_imp <- complete(imp)
+
+
+colSums(is.na(test_imp))
+```
+
+
+
 #### Outliers
 
 Many numerical features have somewhat unreasonable negative values, so we decided to use log-transformed variables. 
@@ -214,5 +243,6 @@ Many numerical features have somewhat unreasonable negative values, so we decide
 #### Data Transformations
 Use log- transform 
 ```{r}
+
 
 ```
