@@ -235,6 +235,40 @@ test_imp <- complete(imp)
 colSums(is.na(test_imp))
 ```
 
+
+
+#### Outliers
+
+Many numerical features have somewhat unreasonable negative values, we decided to shift the variables that had negative values to have the lowest values just above 0. 
+
+```{r}
+shift_to_positive <- function(x, eps = 0.01){
+  x - min(x, na.rm = TRUE) + eps
+}
+```
+
+
+```{r}
+chem_vars <- c(
+  "FixedAcidity",
+  "VolatileAcidity",
+  "CitricAcid",
+  "ResidualSugar",
+  "Chlorides",
+  "FreeSulfurDioxide",
+  "TotalSulfurDioxide",
+  "Sulphates", 
+  "Alcohol"
+)
+```
+
+
+```{r}
+train_mice[chem_vars] <- lapply(train_mice[chem_vars], shift_to_positive)
+test_imp[chem_vars]   <- lapply(test_imp[chem_vars], shift_to_positive)
+```
+
+
 Density plot to recheck distribution of numeric variables.
 ```{r}
 # Select numeric variables only (density requires numeric)
@@ -253,15 +287,15 @@ plot_list <- lapply(num_vars, function(var) {
 wrap_plots(plot_list, ncol = 4)
 ```
 
+### Models
 
-#### Outliers
-
-Many numerical features have somewhat unreasonable negative values, so we decided to use log-transformed variables. 
-
-#### Data Transformations
-Use log- transform 
+Poisson Regression Model 1- baseline with all variables.
 ```{r}
-
-
+Model_p1<-glm(TARGET~., data=train_mice, family=poisson)
+summary(Model_p1)
 ```
+
+
+
+
 
