@@ -41,7 +41,7 @@ library(kableExtra)
 library(tinytex)
 library(tidyr)
 library(patchwork)
-
+library(nnet)
 ```
 
 
@@ -294,7 +294,19 @@ Poisson Regression Model 1- baseline with all variables.
 Model_p1<-glm(TARGET~., data=train_mice, family=poisson)
 summary(Model_p1)
 ```
+Multiple linear regression Model- baseline with all variables
+```{r}
+Model_M<-lm(TARGET~.,data = train_mice)
+summary(Model_M)
+```
 
+Multinomial logistic regression with all variables
+```{r}
+set.seed(123)
+
+Model_ML <- multinom(TARGET ~ ., data = train_mice)
+summary(Model_ML)
+```
 
 
 
