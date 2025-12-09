@@ -14,42 +14,112 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(caret)
+library(DataExplorer)
+library(e1071)
+library(corrplot)
 ```
 
-Import
+### Import
 
 ```{r}
-df <- read.csv("breast-cancer.csv")
+#df <- read.csv("breast-cancer.csv")
+df_raw <- read.csv("https://raw.githubusercontent.com/Chung-Brandon/621-Data-Mining/refs/heads/main/breast-cancer.csv")
 ```
 
-Convert y variable to factor
+### Clean & Tidy
 
 ```{r}
+# Convert y variable to factor
+df <- df_raw |> mutate(diagnosis = as.factor(diagnosis))
+
+# Keep only the mean value columns
 df <- df |>
-  mutate(diagnosis = as.factor(diagnosis))
+  select(
+    -id,
+    -ends_with("_se"),          # drop all *_se columns
+    -ends_with("_worst")        # drop all *_worst columns
+  )
 ```
 
-Partition
+### Data Exploration
 
 ```{r}
-set.seed(123)
-
-train_index <- createDataPartition(df$diagnosis, p = 0.7, list = FALSE)
-
-train <- df[train_index, ]
-test <- df[-train_index, ]
-```
-
-Data Exploration
-
-```{r}
+# Check missing values
 colSums(is.na(df))
 ```
 
 ```{r}
-ggplot(train, aes(x = diagnosis)) +
+# Distribution of target variable
+ggplot(df, aes(x = diagnosis)) +
   geom_bar()
 ```
 
+```{r}
+# Distribution of all other variables
+plot_histogram(df)
+```
 
+### Correlation matrix
+
+```{r}
+# Convert factor names to binary: Malignant = 1, Benign = 0
+df$diagnosis <- ifelse(df$diagnosis == "M", 1, 0)
+
+corr_matrix <- cor(df, use = "complete.obs")
+corrplot(corr_matrix, method = "color", type = "upper")
+```
+
+### Data Transformations
+
+```{r}
+# Log transform for skewed variables
+numeric_cols <- sapply(df, is.numeric)
+numeric_cols["diagnosis"] <- FALSE
+
+skews <- apply(df[, numeric_cols], 2, skewness)
+skews <- skews[-1] |> sort(decreasing = TRUE)
+
+# Use log(x+1) of any variable with skew > 1
+skews_log <- names(skews[skews > 1])
+df_log <- df
+df_log[, skews_log] <- log1p(df[, skews_log])
+
+names(df_log)[names(df_log) %in% skews_log] <- paste0(skews_log, "_log")
+names(df_log)
+```
+
+```{r}
+# Standardize large variations with Z-score scaling (mean = 0, SD = 1)
+df_log[, numeric_cols] <- scale(df_log[, numeric_cols])
+```
+
+```{r}
+# Partition for training and testing
+set.seed(123)
+
+train_index <- createDataPartition(df_log$diagnosis, p = 0.7, list = FALSE)
+
+train <- df_log[train_index, ]
+test <- df_log[-train_index, ]
+```
+
+# Models
+
+### Logistic Regression
+
+```{r}
+m1 <- glm(diagnosis ~ ., data = train, family = binomial)
+summary(m1)
+```
+
+This preliminary logistic regression model is an improvement over the null, as per the reduction in deviance from 515.85 to 108.49. Of all the predictor variables, `texture_mean` is the most significant (p < 0.001), suggesting that higher texture values are strongly associated with increased odds of malignancy.
+
+`smoothness_mean` and `compactness_mean_log` show borderline significance. The remaining variables are not relevant, so the 2nd model below drops them.
+
+```{r}
+m2 <- glm(diagnosis ~ texture_mean + smoothness_mean + compactness_mean_log, data = train, family = binomial)
+summary(m2)
+```
+
+In this simplified model, both `texture_mean` (p < 0.001) and `compactness_mean_log` (p < 0.001) are highly significant, while `smoothness_mean` is not (p = 0.132), suggesting its effect is weak after accounting for the other two predictors.
 
