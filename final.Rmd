@@ -123,3 +123,13 @@ summary(m2)
 
 In this simplified model, both `texture_mean` (p < 0.001) and `compactness_mean_log` (p < 0.001) are highly significant, while `smoothness_mean` is not (p = 0.132), suggesting its effect is weak after accounting for the other two predictors.
 
+
+Model #3
+Decision Tree- chosen as it easy to interpret and easy to communicate with clinicans, captures non linear relationships (in the real world many biological variables interact in non linear ways.), handles well mixeed types of predictors, and fast to train and test.
+```{r}
+m3<-rpart(diagnosis~., data = train, method = "class")
+
+#decision tree plot
+rpart.plot(m3, main="Breast Cancer Classification Decision Tree Model")
+```
+
