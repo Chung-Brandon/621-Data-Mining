@@ -17,6 +17,9 @@ library(caret)
 library(DataExplorer)
 library(e1071)
 library(corrplot)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
 ```
 
 ### Import
@@ -132,4 +135,16 @@ m3<-rpart(diagnosis~., data = train, method = "class")
 #decision tree plot
 rpart.plot(m3, main="Breast Cancer Classification Decision Tree Model")
 ```
+
+
+Model #4 
+Random Forest- is well-suited for this breast cancer classification task because it handles nonlinear interactions among tumor characteristics without requiring explicit specification. Robust to multicollinearity, which is important given the high correlation among many tumor measurements. Provides variable importance measures, offering insight into which features contribute most to classification. Performs well with high-dimensional data and minimal tuning. Typically yields strong predictive accuracy.
+```{r}
+set.seed(123)
+m4<-randomForest(as.factor(diagnosis)~.,data = train, ntree=500, mtry=floor(sqrt(ncol(train)-1)),importance=TRUE)
+
+print(m4)
+```
+
+
 
