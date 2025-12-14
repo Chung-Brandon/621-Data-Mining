@@ -20,6 +20,8 @@ library(corrplot)
 library(rpart)
 library(rpart.plot)
 library(randomForest)
+library(pROC)
+library(knitr)
 ```
 
 ### Import
@@ -146,5 +148,56 @@ m4<-randomForest(as.factor(diagnosis)~.,data = train, ntree=500, mtry=floor(sqrt
 print(m4)
 ```
 
+## Model selection 
 
+```{r}
+# create eval function
+eval_model <- function(true, prob, threshold = 0.5) {
+  pred <- ifelse(prob > threshold, 1, 0)
+  
+  cm <- confusionMatrix(
+    factor(pred),
+    factor(true),
+    positive = "1"
+  )
+  
+  data.frame(
+    Accuracy = cm$overall["Accuracy"],
+    Sensitivity = cm$byClass["Sensitivity"],
+    Specificity = cm$byClass["Specificity"],
+    AUC = auc(roc(true, prob))
+  )
+}
+```
+
+
+```{r}
+log_prob1<-predict(m1, test, type= "response")
+log_results1<-eval_model(test$diagnosis, log_prob1)
+
+log_prob2<-predict(m2, test, type= "response")
+log_results2<-eval_model(test$diagnosis, log_prob2)
+
+tree_prob<-predict(m3, test, type= "prob")[,2]
+tree_results<-eval_model(test$diagnosis, tree_prob)
+
+rf_prob<-predict(m4, test, type= "prob")[,2]
+rf_results<-eval_model(test$diagnosis, rf_prob)
+```
+
+
+```{r}
+results_table <- rbind(
+  Logistic_Regression = log_results1,
+  Logistic_Regression_Reduced = log_results2,
+  Decision_Tree = tree_results,
+  Random_Forest = rf_results
+)
+
+results_table <- round(results_table, 3)
+
+kable(
+  results_table,
+  caption = "Model Performance Comparison")
+```
 
